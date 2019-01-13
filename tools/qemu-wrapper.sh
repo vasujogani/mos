@@ -165,7 +165,7 @@ case "$ARCH" in
 	    -m 1024 \
         -smp $SMP \
 	    -machine vexpress-a15"
-	GDB=gdb
+	GDB=arm-none-eabi-gdb
 	QEMU_NONDEBUG=-nographic
 	;;
 	"armv8")
@@ -262,7 +262,7 @@ target remote localhost:$PORT
 EOF
 
 if [ -z "$EFI" ] ; then
-    if [ -z "$IMAGE"]; then
+    if [ -z "$IMAGE" ]; then
         QEMU_INVOCATION="${QEMU_CMD} \
             -kernel \"$KERNEL\" \
             -append \"$KERNEL_CMDS\" \

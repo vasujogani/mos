@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 {- 
   Hake: a meta build system for Barrelfish
 
@@ -33,9 +35,12 @@ import System.IO
 import GHC hiding (Target, Ghc, runGhc, FunBind, Match)
 import GHC.Paths (libdir)
 import Control.Monad.Ghc
-import DynFlags (defaultFatalMessager, defaultFlushOut,
-                 xopt_set, ExtensionFlag(Opt_DeriveDataTypeable,
-                                         Opt_StandaloneDeriving))
+import DynFlags (defaultFatalMessager, defaultFlushOut, xopt_set)
+#if (__GLASGOW_HASKELL__ > 710)
+import qualified Language.Haskell.TH.LanguageExtensions as GE
+#else
+import DynFlags                               (ExtensionFlag(Opt_DeriveDataTypeable, Opt_StandaloneDeriving))
+#endif
 
 -- We parse and pretty-print Hakefiles.
 import Language.Haskell.Exts
@@ -59,6 +64,7 @@ data Opts = Opts { opt_makefilename :: String,
                    opt_sourcedir :: String,
                    opt_bfsourcedir :: String,
                    opt_builddir :: String,
+                   opt_ghc_libdir :: String,
                    opt_abs_installdir :: String,
                    opt_abs_sourcedir :: String,
                    opt_abs_bfsourcedir :: String,
@@ -76,6 +82,7 @@ parse_arguments [] =
          opt_sourcedir = Config.source_dir,
          opt_bfsourcedir = Config.source_dir,
          opt_builddir = ".",
+         opt_ghc_libdir = libdir,
          opt_abs_installdir = "",
          opt_abs_sourcedir = "",
          opt_abs_bfsourcedir = "",
@@ -89,6 +96,8 @@ parse_arguments ("--source-dir" : s : t) =
   (parse_arguments t) { opt_sourcedir = s }
 parse_arguments ("--bfsource-dir" : s : t) =  
   (parse_arguments t) { opt_bfsourcedir = s }
+parse_arguments ("--ghc-libdir" : (s : t)) =
+  (parse_arguments t) { opt_ghc_libdir = s }
 parse_arguments ("--output-filename" : s : t) =
   (parse_arguments t) { opt_makefilename = s }
 parse_arguments ("--quiet" : t ) = 
@@ -109,6 +118,7 @@ usage = unlines [ "Usage: hake <options>",
                   "   --source-dir <dir> (required)",
                   "   --bfsource-dir <dir> (defaults to source dir)",
                   "   --install-dir <dir> (defaults to source dir)",
+                  "   --ghc-libdir <dir> (defaults to " ++ libdir ++ ")",
                   "   --quiet",
                   "   --verbose"
                 ]
@@ -189,12 +199,12 @@ listFiles' root current
 
 -- We invoke GHC to parse the Hakefiles in a preconfigured environment,
 -- to implement the Hake DSL.
-evalHakeFiles :: Handle -> Opts -> TreeDB -> [(FilePath, String)] ->
+evalHakeFiles :: FilePath -> Handle -> Opts -> TreeDB -> [(FilePath, String)] ->
                  IO (S.Set FilePath)
-evalHakeFiles makefile o srcDB hakefiles =
+evalHakeFiles the_libdir makefile o srcDB hakefiles =
     --defaultErrorHandler defaultFatalMessager defaultFlushOut $
     errorHandler $
-        runGhc (Just libdir) $
+        runGhc (Just the_libdir) $
         driveGhc makefile o srcDB hakefiles
 
 -- This is the code that executes in the GHC monad.
@@ -203,8 +213,13 @@ driveGhc :: Handle -> Opts -> TreeDB -> [(FilePath, String)] ->
 driveGhc makefile o srcDB hakefiles = do
     -- Set the RTS flags
     dflags <- getSessionDynFlags
-    let dflags' = foldl xopt_set dflags [ Opt_DeriveDataTypeable,
-                                          Opt_StandaloneDeriving ]
+    let dflags' = foldl xopt_set dflags
+#if (__GLASGOW_HASKELL__ > 710)
+                        [ GE.DeriveDataTypeable,  GE.StandaloneDeriving ]
+#else
+                        [ Opt_DeriveDataTypeable, Opt_StandaloneDeriving ]
+#endif
+
     _ <- setSessionDynFlags dflags'{
         importPaths = module_paths,
         hiDir = Just "./hake",
@@ -340,7 +355,7 @@ printSrcLoc sl =
     (show $ srcColumn sl)
 
 -- Parse a Hakefile, prior to wrapping it with Hake definitions
-parseHake :: FilePath -> String -> Either Exp HakeError
+parseHake :: FilePath -> String -> Either (Exp SrcSpanInfo) HakeError
 parseHake filename contents =
     case result of
         ParseOk e -> Left e
@@ -398,50 +413,52 @@ compileRule (t:ts) =
 -- primitives, and generate the correct expression type (HRule).  The result
 -- is an unevaluted function [FilePath] -> HRule, that needs to be supplied
 -- with the list of all files in the source directory.
-wrapHake :: FilePath -> Exp -> Exp
+wrapHake :: FilePath -> Exp SrcSpanInfo -> Exp SrcSpanInfo
 wrapHake hakefile hake_exp =
-    Paren (
-    Lambda dummy_loc [PVar (Ident "sourceDB")] (
-    Let (BDecls
-        [FunBind [Match -- This is 'find'
-            dummy_loc
-            (Ident "find")
-            [PVar (Ident "fn"), PVar (Ident "arg")]
-            Nothing
-            (UnGuardedRhs
-                (Paren (App (App (App (Var (UnQual (Ident "fn")))
-                                      (Var (UnQual (Ident "sourceDB"))))
-                                 (Lit (String hakefile)))
-                       (Var (UnQual (Ident "arg"))))))
-            (BDecls [])],
+  Paren loc (
+    Lambda loc [PVar loc (Ident loc "sourceDB")] (
+      Let loc (
+        BDecls loc [
+          FunBind loc [
+             -- This is 'find'
+            Match loc (Ident loc "find")
+              [PVar loc (Ident loc "fn"), PVar loc (Ident loc "arg")]
+              -- Nothing
+              (UnGuardedRhs  loc
+                  (Paren  loc (App loc  (App loc  (App loc  (Var loc  (UnQual loc  (Ident loc  "fn")))
+                                        (Var loc  (UnQual loc  (Ident loc  "sourceDB"))))
+                                   (Lit loc  (String loc hakefile "")))
+                         (Var loc  (UnQual loc  (Ident loc  "arg"))))))
+              (Just (BDecls loc  []))
+          ],
 
-        FunBind [Match
-            dummy_loc
-            (Ident "build") -- This is 'build'
-            [PVar (Ident "a")]
-            Nothing
-            (UnGuardedRhs
-                (App (App (App (Paren (App (Var (UnQual (Ident "buildFunction")))
-                                           (Var (UnQual (Ident "a")))))
-                               (Var (UnQual (Ident "sourceDB"))))
-                          (Lit (String hakefile)))
-                     (Var (UnQual (Ident "a")))))
-            (BDecls [])]
-        ])
-        (Paren (App (Con (UnQual (Ident "Rules")))
-                    hake_exp))
-    ))
+          FunBind loc [
+            Match loc
+              (Ident loc "build") -- This is 'build'
+              [PVar loc (Ident loc "a")]
+              (UnGuardedRhs loc
+                  (App loc (App loc (App loc (Paren loc (App loc (Var loc (UnQual loc (Ident loc "buildFunction")))
+                                             (Var loc (UnQual loc (Ident loc "a")))))
+                                 (Var loc (UnQual loc (Ident loc "sourceDB"))))
+                            (Lit  loc(String loc hakefile "")))
+                       (Var loc (UnQual loc (Ident loc "a")))))
+              (Just (BDecls loc []))
+          ]
+        ]
+      ) (Paren loc (App loc (Con loc (UnQual loc (Ident loc "Rules"))) hake_exp))
+    )
+  )
     where
         dummy_loc = SrcLoc { srcFilename = "<hake internal>",
                                 srcLine = 0, srcColumn = 0 }
-
+        loc = Language.Haskell.Exts.noSrcSpan
 --
 -- Makefile generation
 --
 
 -- The Makefile header, generated once.
 makefilePreamble :: Handle -> Opts -> [String] -> IO ()
-makefilePreamble h opts args = 
+makefilePreamble h opts args =
     mapM_ (hPutStrLn h)
           ([ "# This Makefile is generated by Hake.  Do not edit!",
              "# ",
@@ -659,7 +676,8 @@ makeHakeDeps h o l = do
                     ( [ hake, 
                         Str "--source-dir", Str (opt_sourcedir o),
                         Str "--install-dir", Str (opt_installdir o),
-                        Str "--output-filename", makefile
+                        Str "--output-filename", makefile,
+                        Str "--ghc-libdir", Str (opt_ghc_libdir o)
                       ] ++
                       [ Dep SrcTree "root" h | h <- l ]
                     )
@@ -718,6 +736,7 @@ body =  do
                        " (" ++ opt_abs_bfsourcedir opts ++ ")")
     putStrLn ("Install directory: " ++ opt_installdir opts ++
                        " (" ++ opt_abs_installdir opts ++ ")")
+    putStrLn ("GHC libdir: " ++ opt_ghc_libdir opts)
 
     -- Find Hakefiles
     putStrLn "Scanning directory tree..."
@@ -733,7 +752,7 @@ body =  do
     -- Evaluate Hakefiles
     putStrLn $ "Evaluating " ++ show (length hakefiles) ++
                         " Hakefiles..."
-    dirs <- evalHakeFiles makefile opts srcDB hakefiles
+    dirs <- evalHakeFiles (opt_ghc_libdir opts) makefile opts srcDB hakefiles
 
     -- Emit directory rules
     putStrLn $ "Generating build directory dependencies..."
