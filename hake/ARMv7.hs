@@ -43,6 +43,8 @@ ourCommonFlags = [ Str "-fno-unwind-tables",
                    Str "-march=armv7-a",
                    Str "-mapcs",
                    Str "-mabi=aapcs-linux",
+                   Str "-mfloat-abi=hard",
+                   Str "-mfpu=vfpv3",
                    Str "-msingle-pic-base",
                    Str "-mpic-register=r9",
                    Str "-DPIC_REGISTER=R9",
@@ -65,7 +67,8 @@ cxxFlags = ArchDefaults.commonCxxFlags
 cDefines = ArchDefaults.cDefines options
 
 ourLdFlags = [ Str "-Wl,-section-start,.text=0x400000",
-               Str "-Wl,--build-id=none" ]
+               Str "-Wl,--build-id=none",
+               Str "-static" ]
 
 ldFlags = ArchDefaults.ldFlags arch ++ ourLdFlags
 ldCxxFlags = ArchDefaults.ldCxxFlags arch ++ ourLdFlags
@@ -114,9 +117,10 @@ kernelCFlags = [ Str s | s <- [ "-fno-builtin",
                                 "-marm",
                                 "-mcpu=cortex-a9",
                                 "-march=armv7-a",
+                                "-mfpu=vfpv3",
                                 "-mapcs",
                                 "-mabi=aapcs-linux",
-                                "-mfloat-abi=soft",
+                                "-mfloat-abi=hard",
                                 "-fPIE",
                                 "-U__linux__",
                                 "-Wall",
