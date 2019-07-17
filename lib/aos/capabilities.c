@@ -152,7 +152,7 @@ struct capref cap_vroot = {
 static inline bool backoff(int count)
 {
     // very crude exponential backoff based upon core id
-    int yieldcnt = 2^count * disp_get_core_id();
+    int yieldcnt = (1 << count) * disp_get_core_id();
     for (int i=0; i<yieldcnt; i++) {
         thread_yield();
     }
