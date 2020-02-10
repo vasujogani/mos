@@ -24,8 +24,21 @@ errval_t mm_init(struct mm *mm, enum objtype objtype,
                  void *slot_alloc_inst)
 {
     assert(mm != NULL);
-    // TODO: Implement
-    return LIB_ERR_NOT_IMPLEMENTED;
+    mm->slot_alloc = slot_alloc_func;
+    mm->objtype = objtype;
+    mm->slot_refill = slot_refill_func;
+    mm->slot_alloc_inst = slot_alloc_inst;
+    mm->objtype = objtype;
+    mm->head = NULL;
+
+    // create slab allocator
+    struct slab_allocator slab_alloc;
+    slab_alloc.slabs = NULL;
+    slab_alloc.blocksize = sizeof(struct mmnode);
+    slab_alloc.refill_func = slab_refill_func;
+    mm->slabs = slab_alloc;
+
+    return 0;
 }
 
 /**
@@ -44,8 +57,22 @@ void mm_destroy(struct mm *mm)
  */
 errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
 {
-    // TODO: Implement
-    return LIB_ERR_NOT_IMPLEMENTED;
+    struct mmnode *node = slab_alloc(&mm->slabs);
+    node->type = NodeType_Free;
+
+    // create capinfo object
+    struct capinfo info;
+    info.capref = cap;
+    info.base = base;
+    info.size = size;
+    node->capinfo = info;
+
+    node->next = mm->head;
+    node->prev = NULL;
+    mm->head = node;
+
+    node->base = base;
+    node->size = size;
 }
 
 /**
@@ -71,8 +98,7 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
  */
 errval_t mm_alloc(struct mm *mm, size_t size, struct capref *retcap)
 {
-    // TODO: Implement
-    return LIB_ERR_NOT_IMPLEMENTED;
+    
 }
 
 /**

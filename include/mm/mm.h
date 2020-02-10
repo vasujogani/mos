@@ -45,6 +45,7 @@ struct mmnode {
     struct mmnode *next;   ///< Next node in the list.
     genpaddr_t base;       ///< Base address of this region
     gensize_t size;        ///< Size of this free region in cap
+    int level;             ///< level of this node in our tree structure
 };
 
 /**
