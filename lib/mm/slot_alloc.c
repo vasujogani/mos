@@ -48,6 +48,7 @@ errval_t slot_prealloc_refill(void *this)
         err = err_push(err, MM_ERR_SLOT_MM_ALLOC);
         goto out;
     }
+    //**
 
     // Retype to and build the next cnode
     printf("after mm_alloc\n");

@@ -28,15 +28,20 @@ errval_t mm_init(struct mm *mm, enum objtype objtype,
     mm->objtype = objtype;
     mm->slot_refill = slot_refill_func;
     mm->slot_alloc_inst = slot_alloc_inst;
-    mm->objtype = objtype;
     mm->head = NULL;
 
-    // create slab allocator
-    struct slab_allocator slab_alloc;
-    slab_alloc.slabs = NULL;
-    slab_alloc.blocksize = sizeof(struct mmnode);
-    slab_alloc.refill_func = slab_refill_func;
-    mm->slabs = slab_alloc;
+    // // create slab allocator
+    // struct slab_allocator slab_alloc;
+    // slab_alloc.slabs = NULL;
+    // slab_alloc.blocksize = sizeof(struct mmnode);
+    // slab_alloc.refill_func = slab_refill_func;
+    // mm->slabs = slab_alloc;
+
+    if (slab_refill_func==NULL) {
+        slab_refill_func = slab_default_refill;
+    }
+
+    slab_init(&mm->slabs, sizeof(struct mmnode), slab_refill_func);
 
     return SYS_ERR_OK; //TODO add validation
 }
@@ -58,11 +63,18 @@ void mm_destroy(struct mm *mm)
 errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
 {
     printf("inside mm_add\n");
-    struct mmnode *node = slab_alloc(&mm->slabs);
+    void *baseptr = slab_alloc(&mm->slabs);
+    if (baseptr == NULL) {
+        // @TODO: return some error
+    }
+    struct mmnode *node = (struct mmnode*) baseptr;
     if (!node) {
+        // @TODO: update the return type to be an error not -1
         return -1;
     }
     node->type = NodeType_Free;
+    node->base = base;
+    node->size = size;
 
     // create capinfo object
     struct capinfo info;
@@ -71,6 +83,8 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
     info.size = size;
     node->cap = info;
 
+    // @TODO: add it to the end
+    // REVERSE list?
     node->next = mm->head;
     node->prev = NULL;
     mm->head->prev = node;
@@ -79,9 +93,7 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
     mm->head = node;
     node->free =  true;
 
-    node->base = base;
-    node->size = size;
-
+    
     return SYS_ERR_OK;
 }
 
