@@ -1,0 +1,5 @@
+armv7/kernel/arch/armv7/bsp_start.o \
+ armv7/kernel/arch/armv7/bsp_start.o.depend: \
+ /u/rv22698/Documents/Multicore/p2_code/kernel/arch/armv7/bsp_start.S \
+ /u/rv22698/Documents/Multicore/p2_code/include/deputy/nodeputy.h \
+ /u/rv22698/Documents/Multicore/p2_code/kernel/include/arch/armv7/offsets.h

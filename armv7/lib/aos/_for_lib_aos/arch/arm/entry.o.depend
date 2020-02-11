@@ -1,0 +1,5 @@
+armv7/lib/aos/_for_lib_aos/arch/arm/entry.o \
+ armv7/lib/aos/_for_lib_aos/arch/arm/entry.o.depend: \
+ /u/rv22698/Documents/Multicore/p2_code/lib/aos/arch/arm/entry.S \
+ /u/rv22698/Documents/Multicore/p2_code/include/aos/dispatch.h \
+ armv7/include/asmoffsets.h
