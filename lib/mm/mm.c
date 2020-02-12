@@ -44,6 +44,12 @@ errval_t mm_init(struct mm *mm, enum objtype objtype,
  */
 void mm_destroy(struct mm *mm)
 {
+    struct mmnode *curr = mm->head;
+    while(curr) {
+        cap_destroy(curr->cap.cap);
+        curr->type = NodeType_Free;
+        slab_free(&mm->slabs, &curr);
+    }
 }
 
 /**
@@ -81,13 +87,15 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
         mm->head = node;
         node->next = NULL:
         node->prev = NULL;
+    } else {
+        while(curr->next != NULL) {
+            curr = curr->next;
+        }
+        curr->next = node;
+        node->prev = curr;
+        node->next = NULL;
     }
-    while(curr->next != NULL) {
-        curr = curr->next;
-    }
-    curr->next = node;
-    node->prev = curr;
-    node->next = NULL;
+
 
     // Allocate a slot for new capability
     err = mm_slot_alloc(mm, 1, &(node->cap.cap));
@@ -96,10 +104,6 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
     // Initialize the original base and size
     mm->initial_base = base;
     mm->initial_size = size;
-
-    // retype it but since the address passed in is 0, it doesnt do anything
-    err = cap_retype(node->cap.cap, cap, 0, mm->objtype, (gensize_t) size, 1);
-    assert(!err_is_fail(err));
 
     return err;
 
@@ -184,23 +188,27 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
     assert(err_is_ok(err));
     struct capinfo cap = curr->cap;
     err = cap_retype(retcap, cap.cap, offset, ObjType_RAM, size, 1);
-    struct mmnode *allocated_space_node = mm_add_inspot(mm, &remainder, curr, offset + size, curr->size - (offset + size));
+    struct mmnode *allocated_space_node = mm_add_inspot(mm, &retcap, curr, offset, size);
     allocated_space_node->parent = curr;
+    allocated_space_node->type = NodeType_Allocated;
     assert(err_is_ok(err));
     
+    curr->type = NodeType_Allocated;
+
     // add capability for remaining space (after)
     if (offset + size < curr->size) {
         struct capref remainder;
         err = mm->slot_alloc(mm->slot_alloc_inst, 1, &remainder);
         assert(err_is_ok(err));
         err = cap_retype(&remainder, cap.cap, offset + size, ObjType_RAM, curr->size - (offset + size), 1);
-        struct mmnode *next = mm_add_inspot(mm, &remainder, curr, offset + size, curr->size - (offset + size));
+        struct mmnode *next = mm_add_inspot(mm, &remainder, allocated_space_node, offset + size, curr->size - (offset + size));
+        next->type = NodeType_Free;
         next->parent = curr;
     }
-    curr->type = NodeType_Allocated;
-    if (curr->parent != NULL) {
-        (curr->parent)->children--; 
-    }
+    // @NOTE: not needed 
+    // if (curr->parent != NULL) {
+    //     (curr->parent)->children--; 
+    // }
     curr->free_children = 1;
     return err;
 }
@@ -249,7 +257,23 @@ errval_t mm_free(struct mm *mm, struct capref cap, genpaddr_t base, gensize_t si
     // iterate through and find the position in the list, and then coalesce recursively
     // if any node is equal to prev, remove curr node
     struct mmnode *curr = mm->head;
-    while (curr && curr->base <= base) {
+    while (curr) {
+        if(curr->base == base && curr->size == size) {
+            curr->parent->type = NodeType_Free;
+            curr->parent->free_children = 2;
+            
+            cap_destroy(curr->cap.cap);
 
+            curr->parent->next = curr->next;
+
+            if (curr->parent->next) {
+                cap_destroy(curr->parent->next->cap.cap)
+
+                curr->parent->next = curr->parent->next->next;
+                curr->parent->next->next->prev = curr->parent;
+            }
+        }
     }
+
+    return SYS_ERR_OK;
 }
