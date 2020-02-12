@@ -1,0 +1,4 @@
+armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_memset.o \
+ armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_memset.o.depend: \
+ /u/rv22698/Documents/Multicore/p2_code/lib/compiler-rt/builtins/arm/aeabi_memset.S \
+ /u/rv22698/Documents/Multicore/p2_code/lib/compiler-rt/builtins/arm/../assembly.h

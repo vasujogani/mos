@@ -45,8 +45,8 @@ struct mmnode {
     struct mmnode *next;   ///< Next node in the list.
     genpaddr_t base;       ///< Base address of this region
     gensize_t size;        ///< Size of this free region in cap
-    struct mmnode *p;
-    struct mmnode *n;
+    struct mmnode *parent;
+    int free_children;      ///< When equal to 2, both children are free
     bool free;
 };
 

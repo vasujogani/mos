@@ -65,6 +65,8 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
     node->type = NodeType_Free;
     node->base = base;
     node->size = size;
+    node->free_children = 0;
+    node->parent = NULL;
 
     // create capinfo object
     struct capinfo info;
@@ -116,14 +118,14 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
     return SYS_ERR_OK;
 }
 
-errval_t mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *parent, genpaddr_t base, size_t size) {
+struct mmnode *mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *parent, genpaddr_t base, size_t size) {
     
     assert(prev);
-    struct mmnode *node = slab_alloc(&mm->slabs);
-    if (!node) {
-        return -1;
-    }
+    struct mmnode *node = (struct mmnode *)slab_alloc(&mm->slabs);
+    assert(!node);
     node->type = NodeType_Free;
+    node->free_children = 0;
+    node->parent = NULL;
 
     // create capinfo object
     struct capinfo info;
@@ -141,7 +143,7 @@ errval_t mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *parent, 
     node->base = base;
     node->size = size;
 
-    return SYS_ERR_OK;
+    return node;
 }
 
 /**
@@ -154,8 +156,53 @@ errval_t mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *parent, 
  */
 errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct capref *retcap)
 {
-    // TODO: Implement
-    return LIB_ERR_NOT_IMPLEMENTED;
+    if (size < alignment) {
+        size = alignment;
+    } else {
+        size = size + (alignment - (size % alignment));
+    }
+    struct mmnode *curr = mm->head;
+    size_t offset = 0;
+    while (curr) {
+        if (!(curr->type == NodeType_Allocated || curr->size < size)) {
+            offset = alignment - (curr->base % alignment);
+            if (offset + size <= curr->size) {
+                break;
+            }
+        }
+        curr = curr->next;
+    }
+
+    assert(curr);
+    if (!curr) {
+        // couldn't find a free region
+        //TODO: add correct error code
+        return -1;
+    }
+    // create a capability and mmnode for allocated memory going to user
+    errval_t err = mm->slot_alloc(mm->slot_alloc_inst, 1, retcap);
+    assert(err_is_ok(err));
+    struct capinfo cap = curr->cap;
+    err = cap_retype(retcap, cap.cap, offset, ObjType_RAM, size, 1);
+    struct mmnode *allocated_space_node = mm_add_inspot(mm, &remainder, curr, offset + size, curr->size - (offset + size));
+    allocated_space_node->parent = curr;
+    assert(err_is_ok(err));
+    
+    // add capability for remaining space (after)
+    if (offset + size < curr->size) {
+        struct capref remainder;
+        err = mm->slot_alloc(mm->slot_alloc_inst, 1, &remainder);
+        assert(err_is_ok(err));
+        err = cap_retype(&remainder, cap.cap, offset + size, ObjType_RAM, curr->size - (offset + size), 1);
+        struct mmnode *next = mm_add_inspot(mm, &remainder, curr, offset + size, curr->size - (offset + size));
+        next->parent = curr;
+    }
+    curr->type = NodeType_Allocated;
+    if (curr->parent != NULL) {
+        (curr->parent)->children--; 
+    }
+    curr->free_children = 1;
+    return err;
 }
 
 // static bool can_allocate_in_list(struct mmnode *current_root, size_t size) {
@@ -185,46 +232,7 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
  */
 errval_t mm_alloc(struct mm *mm, size_t size, struct capref *retcap)
 {
-    struct mmnode *curr = mm->head;
-    while (curr && (curr->type == NodeType_Allocated || curr->size < size)) {
-        curr = curr->next;
-    }
-
-    if (!curr) {
-        // couldn't find a free region
-        //TODO: add correct error code
-        return -1;
-    }
-    errval_t err = cap_retype(retcap, (curr->cap).cap, 0, ObjType_RAM, size, 1);
-    if (err != SYS_ERR_OK) {
-        return err;
-    }
-    if (curr->size > size) {
-        struct capref remainder;
-        err = slot_alloc(&remainder);
-        if (err != SYS_ERR_OK) {
-            return err;
-        }
-        err = cap_retype(&remainder, (curr->cap).cap, size, ObjType_RAM, curr->size - size, 1);
-        if (err != SYS_ERR_OK) {
-            return err;
-        }
-        err = mm_add_inspot(mm, &remainder, curr, curr->base + size, curr->size - size);
-        curr->type = NodeType_Allocated;
-    }
-    return err;
-
-    // bool allocated = false;
-    // struct mmnode *current_root = mm->head;
-    // while (current_root->next && !allocated) {
-    //     //can we allocate in this list?
-    //     can_allocate_in_list(current_root, size);
-    //     current_root = current_root->next;
-    // }
-    // if (!allocated)
-    // {
-    //     //error
-    // }  
+    return mm_alloc_aligned(mm, size, BASE_PAGE_SIZE, retcap);
 }
 
 /**
@@ -237,6 +245,11 @@ errval_t mm_alloc(struct mm *mm, size_t size, struct capref *retcap)
  */
 errval_t mm_free(struct mm *mm, struct capref cap, genpaddr_t base, gensize_t size)
 {
+
     // iterate through and find the position in the list, and then coalesce recursively
-    //
+    // if any node is equal to prev, remove curr node
+    struct mmnode *curr = mm->head;
+    while (curr && curr->base <= base) {
+
+    }
 }

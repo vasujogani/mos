@@ -51,6 +51,7 @@ errval_t slot_prealloc_refill(void *this)
     //**
 
     // Retype to and build the next cnode
+    printf("after mm_alloc\n");
     struct capref cnode_cap;
     err = slot_alloc_root(&cnode_cap);
     if (err_no(err) == LIB_ERR_SLOT_ALLOC_NO_SPACE) {
@@ -63,6 +64,7 @@ errval_t slot_prealloc_refill(void *this)
         // retry slot_alloc_root
         err = slot_alloc_root(&cnode_cap);
     }
+    printf("after slot_alloc_root\n");
     if (err_is_fail(err)) {
         err = err_push(err, LIB_ERR_SLOT_ALLOC);
         goto out;
@@ -74,6 +76,8 @@ errval_t slot_prealloc_refill(void *this)
         err = err_push(err, LIB_ERR_CNODE_CREATE);
         goto out;
     }
+
+    printf("after cnode_create_from_mem\n");
 
     // Set the metadata
     sa->meta[refill].cap.slot  = 0;
