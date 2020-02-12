@@ -52,6 +52,12 @@ int main(int argc, char *argv[])
         DEBUG_ERR(err, "initialize_ram_alloc");
     }
 
+    for (int i = 0; i < 32; i++) {
+        printf("%c\n", i + 97);
+        struct retcap;
+        errval_t e = mm_alloc(&aos_mm, BASE_PAGE_SIZE, *retcap)
+    }
+
     debug_printf("Message handler loop\n");
     // Hang around
     struct waitset *default_ws = get_default_waitset();
