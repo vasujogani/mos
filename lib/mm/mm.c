@@ -105,6 +105,8 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
     mm->initial_base = base;
     mm->initial_size = size;
 
+    // @TODO: initial_cap assign it with cap
+
     return err;
 
     
@@ -160,57 +162,124 @@ struct mmnode *mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *pa
  */
 errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct capref *retcap)
 {
-    if (size < alignment) {
-        size = alignment;
-    } else {
-        size = size + (alignment - (size % alignment));
+    if (size % alignment != 0) {
+        size += (size_t) BASE_PAGE_SIZE - (alignment % BASE_PAGE_SIZE);
     }
+
     struct mmnode *curr = mm->head;
-    size_t offset = 0;
-    while (curr) {
-        if (!(curr->type == NodeType_Allocated || curr->size < size)) {
-            offset = alignment - (curr->base % alignment);
-            if (offset + size <= curr->size) {
-                break;
-            }
+    struct mmnode *match = NULL;
+
+    while(curr) {
+        if (curr->type == NodeType_Free && size < curr->size) {
+            match = curr;
+            break;
         }
         curr = curr->next;
     }
 
-    assert(curr);
-    if (!curr) {
-        // couldn't find a free region
-        //TODO: add correct error code
-        return -1;
-    }
-    // create a capability and mmnode for allocated memory going to user
-    errval_t err = mm->slot_alloc(mm->slot_alloc_inst, 1, retcap);
-    assert(err_is_ok(err));
-    struct capinfo cap = curr->cap;
-    err = cap_retype(retcap, cap.cap, offset, ObjType_RAM, size, 1);
-    struct mmnode *allocated_space_node = mm_add_inspot(mm, &retcap, curr, offset, size);
-    allocated_space_node->parent = curr;
-    allocated_space_node->type = NodeType_Allocated;
-    assert(err_is_ok(err));
-    
-    curr->type = NodeType_Allocated;
+    assert(match != NULL);
 
-    // add capability for remaining space (after)
-    if (offset + size < curr->size) {
-        struct capref remainder;
-        err = mm->slot_alloc(mm->slot_alloc_inst, 1, &remainder);
-        assert(err_is_ok(err));
-        err = cap_retype(&remainder, cap.cap, offset + size, ObjType_RAM, curr->size - (offset + size), 1);
-        struct mmnode *next = mm_add_inspot(mm, &remainder, allocated_space_node, offset + size, curr->size - (offset + size));
-        next->type = NodeType_Free;
-        next->parent = curr;
+    genpaddr_t prev_attr = match->base;
+
+    match->size -= size;
+    match->base += (genpaddr_t) size;
+
+    struct mmnode *prev = NULL;
+    *curr = mm->head;
+    while(curr) {
+        if (base < curr->base) {
+            if (curr->base > base + size) {
+                break;
+            }
+        }
+        prev = curr;
+        curr = curr->next;
     }
-    // @NOTE: not needed 
-    if (curr->parent != NULL) {
-        (curr->parent)->children--; 
+
+    // create new node
+    struct mmnode *new_node = slab_alloc(&mm->slabs);
+    new_node->base = base;
+    new_node->size = size;
+    new_node->type = NodeType_Allocated;
+
+    new_node->next = curr;
+    new_node->prev = prev;
+
+    if (mm->head == NULL) {
+        mm->head = new_node;
     }
-    curr->free_children = 1;
-    return err;
+    if (prev) {
+        prev->next = new_node;
+    }
+    if (curr) {
+        curr->prev = new_node;
+    }
+
+    match->cap.size -= size;
+    match->cap.base += size;
+    new_node->cap.base = prev_attr;
+    new_node->cap.size = size;
+
+    err = mm_slot_alloc(mm, 1, &(new_node->cap.cap));
+    assert(err_is_ok(err));
+
+    cap_retype(new_node->cap.cap, mm->initial_cap, new_node->base - mm->initial_base, mm->objtype, size, 1);
+
+    *retcap = new_node->cap.cap;
+    
+    return SYS_ERR_OK;
+
+    // if (size < alignment) {
+    //     size = alignment;
+    // } else {
+    //     size = size + (alignment - (size % alignment));
+    // }
+    // struct mmnode *curr = mm->head;
+    // size_t offset = 0;
+    // while (curr) {
+    //     if (!(curr->type == NodeType_Allocated || curr->size < size)) {
+    //         offset = alignment - (curr->base % alignment);
+    //         if (offset + size <= curr->size) {
+    //             break;
+    //         }
+    //     }
+    //     curr = curr->next;
+    // }
+
+    // assert(curr);
+    // if (!curr) {
+    //     // couldn't find a free region
+    //     //TODO: add correct error code
+    //     return -1;
+    // }
+    // // create a capability and mmnode for allocated memory going to user
+    // errval_t err = mm->slot_alloc(mm->slot_alloc_inst, 1, retcap);
+    // assert(err_is_ok(err));
+    // struct capinfo cap = curr->cap;
+    // err = cap_retype(retcap, cap.cap, offset, ObjType_RAM, size, 1);
+    // struct mmnode *allocated_space_node = mm_add_inspot(mm, &retcap, curr, offset, size);
+    // allocated_space_node->parent = curr;
+    // allocated_space_node->type = NodeType_Allocated;
+    // assert(err_is_ok(err));
+    
+    // curr->type = NodeType_Allocated;
+
+    // // add capability for remaining space (after)
+    // if (offset + size < curr->size) {
+    //     struct capref remainder;
+    //     err = mm->slot_alloc(mm->slot_alloc_inst, 1, &remainder);
+    //     assert(err_is_ok(err));
+    //     err = cap_retype(&remainder, cap.cap, offset + size, ObjType_RAM, curr->size - (offset + size), 1);
+    //     struct mmnode *next = mm_add_inspot(mm, &remainder, allocated_space_node, offset + size, curr->size - (offset + size));
+    //     next->type = NodeType_Free;
+    //     next->parent = curr;
+    // }
+    // // @NOTE: not needed 
+    // if (curr->parent != NULL) {
+    //     (curr->parent)->children--; 
+    // }
+    // curr->free_children = 1;
+    // return err;
 }
 
 // static bool can_allocate_in_list(struct mmnode *current_root, size_t size) {
