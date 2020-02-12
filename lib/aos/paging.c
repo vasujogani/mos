@@ -52,7 +52,11 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
     // TODO (M4): Implement page fault handler that installs frames when a page fault
     // occurs and keeps track of the virtual address space.
 
+    st->l1_pt = pdir;
     st->slot_allocator = ca;
+    for ( int i = 0; i < ARM_L1_MAX_ENTRIES; i++ ) {
+        st->l2_pts[i].initialized = false;
+    }
     return SYS_ERR_OK;
 }
 
@@ -72,8 +76,13 @@ errval_t paging_init(void)
     // avoid code duplication.
     set_current_paging_state(&current);
 
+    struct capref l1_pt = {
+        .cnode = cnode_page,
+        .slot = 0,
+    };
+
     struct slot_allocator *default_allocator = get_default_slot_allocator();
-    paging_init_state(&current, NULL, NULL, NULL, default_allocator); 
+    paging_init_state(&current, NULL, l1_pt, default_allocator); 
     return SYS_ERR_OK;
 }
 

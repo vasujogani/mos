@@ -44,10 +44,17 @@ typedef int paging_flags_t;
 #define VREGION_FLAGS_READ_WRITE_MPB \
     (VREGION_FLAGS_READ | VREGION_FLAGS_WRITE | VREGION_FLAGS_MPB)
 
+struct l2_pt {
+    struct capref cap;
+    bool initialized;
+};
+
 // struct to store the paging status of a process
 struct paging_state {
     struct slot_allocator* slot_alloc;
     // TODO: add struct members to keep track of the page tables etc
+    struct capref l1_pt;
+    struct l2_pt l2_pts[ARM_L1_MAX_ENTRIES];
 };
 
 
