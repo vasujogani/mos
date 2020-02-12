@@ -163,7 +163,7 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
  */
 errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct capref *retcap)
 {
-    errval_t err;
+    // errval_t err;
     // make size page size aligned
     if (size % alignment != 0) {
         size += (size_t) alignment - (size % alignment);
@@ -216,7 +216,7 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
     curr->cap.size -= size;
     curr->cap.base += size;
 
-    mm_slot_alloc(mm, 1, &(new_node->cap.cap));
+    mm->slot_alloc(mm, 1, &(new_node->cap.cap));
     cap_retype(new_node->cap.cap, mm->initial_cap, new_node->base - mm->initial_base, mm->objtype, (gensize_t) size, 1);
     new_node->type = NodeType_Allocated;
     *retcap = new_node->cap.cap;
