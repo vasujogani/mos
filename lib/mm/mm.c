@@ -206,9 +206,9 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
         next->parent = curr;
     }
     // @NOTE: not needed 
-    // if (curr->parent != NULL) {
-    //     (curr->parent)->children--; 
-    // }
+    if (curr->parent != NULL) {
+        (curr->parent)->children--; 
+    }
     curr->free_children = 1;
     return err;
 }
@@ -253,27 +253,30 @@ errval_t mm_alloc(struct mm *mm, size_t size, struct capref *retcap)
  */
 errval_t mm_free(struct mm *mm, struct capref cap, genpaddr_t base, gensize_t size)
 {
-
     // iterate through and find the position in the list, and then coalesce recursively
     // if any node is equal to prev, remove curr node
     struct mmnode *curr = mm->head;
     while (curr) {
-        if(curr->base == base && curr->size == size) {
-            curr->parent->type = NodeType_Free;
-            curr->parent->free_children = 2;
-            
+        if (base >= curr->base && (base + size) <= (curr->base + curr->size)) {
+            //free
             cap_destroy(curr->cap.cap);
-
-            curr->parent->next = curr->next;
-
-            if (curr->parent->next) {
-                cap_destroy(curr->parent->next->cap.cap)
-
-                curr->parent->next = curr->parent->next->next;
-                curr->parent->next->next->prev = curr->parent;
+            curr->cap = NULL;
+            //coalesce
+            struct mmnode *left = curr->prev;
+            struct mmnode *right = curr->next;
+            if (left && left->type == NodeType_Free) {
+                curr->base = left->base;
+                curr->size += left->size;
+                curr->prev = left->prev;
+                slab_free(mm->slabs, left);
             }
+            if (right && right->type == NodeType_Free) {
+                curr->size += right->size;
+                curr->next = right->next;
+                slab_free(mm->slabs, right);
+            }
+
         }
     }
-
     return SYS_ERR_OK;
 }

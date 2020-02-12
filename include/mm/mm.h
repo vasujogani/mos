@@ -45,9 +45,6 @@ struct mmnode {
     struct mmnode *next;   ///< Next node in the list.
     genpaddr_t base;       ///< Base address of this region
     gensize_t size;        ///< Size of this free region in cap
-    struct mmnode *parent;
-    int free_children;      ///< When equal to 2, both children are free
-    bool free;
 };
 
 /**
@@ -63,8 +60,8 @@ struct mm {
     void *slot_alloc_inst;       ///< Opaque instance pointer for slot allocator
     enum objtype objtype;        ///< Type of capabilities stored
     struct mmnode *head;         ///< Head of doubly-linked list of nodes in order
-    genpaddr_t initial_base;
-    size_t initial_size;
+    // genpaddr_t initial_base;
+    // size_t initial_size;
 };
 
 errval_t mm_init(struct mm *mm, enum objtype objtype,
