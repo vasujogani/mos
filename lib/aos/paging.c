@@ -51,6 +51,8 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
     // TODO (M2): implement state struct initialization
     // TODO (M4): Implement page fault handler that installs frames when a page fault
     // occurs and keeps track of the virtual address space.
+
+    st->slot_allocator = ca;
     return SYS_ERR_OK;
 }
 
@@ -69,6 +71,9 @@ errval_t paging_init(void)
     // TIP: it might be a good idea to call paging_init_state() from here to
     // avoid code duplication.
     set_current_paging_state(&current);
+
+    struct slot_allocator *default_allocator = get_default_slot_allocator();
+    paging_init_state(&current, NULL, NULL, NULL, default_allocator); 
     return SYS_ERR_OK;
 }
 
@@ -182,6 +187,22 @@ slab_refill_no_pagefault(struct slab_allocator *slabs, struct capref frame, size
 errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
         struct capref frame, size_t bytes, int flags)
 {
+    // determine pte_count based on size of frame
+    // call slot_alloc to get a capref for mapping
+    struct capref *mapping;
+    errval_t err;
+    err = st->slot_alloc->alloc(st->slot_alloc, mapping);
+    if (err_is_fail(err)) {
+        debug_printf("slot_alloc failed: %s\n", err_getstring(err));
+        return err;
+    }
+    // 
+    // err = vnode_map(dest, src, slot, attr, off, pte_count, mapping) 
+    // if (err_is_fail(err)) {
+    //     debug_printf("vnode_map failed: %s\n", err_getstring(err));
+    //     return err;
+    // }
+    // need to store mapping somewhere
     return SYS_ERR_OK;
 }
 
