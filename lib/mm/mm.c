@@ -30,13 +30,6 @@ errval_t mm_init(struct mm *mm, enum objtype objtype,
     mm->slot_alloc_inst = slot_alloc_inst;
     mm->head = NULL;
 
-    // // create slab allocator
-    // struct slab_allocator slab_alloc;
-    // slab_alloc.slabs = NULL;
-    // slab_alloc.blocksize = sizeof(struct mmnode);
-    // slab_alloc.refill_func = slab_refill_func;
-    // mm->slabs = slab_alloc;
-
     if (slab_refill_func==NULL) {
         slab_refill_func = slab_default_refill;
     }
@@ -68,10 +61,7 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
         // @TODO: return some error
     }
     struct mmnode *node = (struct mmnode*) baseptr;
-    if (!node) {
-        // @TODO: update the return type to be an error not -1
-        return -1;
-    }
+
     node->type = NodeType_Free;
     node->base = base;
     node->size = size;
@@ -83,15 +73,44 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
     info.size = size;
     node->cap = info;
 
+    // Add to the end of the list
+    struct mmnode *curr = mm->head;
+    if (curr == NULL) {
+        mm->head = node;
+        node->next = NULL:
+        node->prev = NULL;
+    }
+    while(curr->next != NULL) {
+        curr = curr->next;
+    }
+    curr->next = node;
+    node->prev = curr;
+    node->next = NULL;
+
+    // Allocate a slot for new capability
+    err = mm_slot_alloc(mm, 1, &(node->cap.cap));
+    assert(!err_is_fail(err));
+    
+    // Initialize the original base and size
+    mm->initial_base = base;
+    mm->initial_size = size;
+
+    // retype it but since the address passed in is 0, it doesnt do anything
+    err = cap_retype(node->cap.cap, cap, 0, mm->objtype, (gensize_t) size, 1);
+    assert(!err_is_fail(err));
+
+    return err;
+
+    
     // @TODO: add it to the end
     // REVERSE list?
-    node->next = mm->head;
-    node->prev = NULL;
-    mm->head->prev = node;
+    // node->next = mm->head;
+    // node->prev = NULL;
+    // mm->head->prev = node;
     // node->left = NULL;
     // node->right = NULL;
-    mm->head = node;
-    node->free =  true;
+    // mm->head = node;
+    // node->free =  true;
 
     
     return SYS_ERR_OK;
@@ -115,7 +134,9 @@ errval_t mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *parent, 
 
     node->prev = parent;
     node->next = parent->next;
+    parent->next->prev = node;
     parent->next = node;
+    
 
     node->base = base;
     node->size = size;

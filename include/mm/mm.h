@@ -63,6 +63,8 @@ struct mm {
     void *slot_alloc_inst;       ///< Opaque instance pointer for slot allocator
     enum objtype objtype;        ///< Type of capabilities stored
     struct mmnode *head;         ///< Head of doubly-linked list of nodes in order
+    genpaddr_t initial_base;
+    size_t initial_size;
 };
 
 errval_t mm_init(struct mm *mm, enum objtype objtype,
