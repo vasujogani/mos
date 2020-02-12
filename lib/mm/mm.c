@@ -63,16 +63,13 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
 {
     printf("inside mm_add\n");
     void *baseptr = slab_alloc(&mm->slabs);
-    if (baseptr == NULL) {
-        // @TODO: return some error
-    }
+    assert(baseptr != NULL);
+
     struct mmnode *node = (struct mmnode*) baseptr;
 
     node->type = NodeType_Free;
     node->base = base;
     node->size = size;
-    node->free_children = 0;
-    node->parent = NULL;
 
     // create capinfo object
     struct capinfo info;
@@ -81,11 +78,12 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
     info.size = size;
     node->cap = info;
 
+    printf("\tbefore adding to list\n");
     // Add to the end of the list
     struct mmnode *curr = mm->head;
     if (curr == NULL) {
         mm->head = node;
-        node->next = NULL:
+        node->next = NULL;
         node->prev = NULL;
     } else {
         while(curr->next != NULL) {
@@ -96,19 +94,21 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
         node->next = NULL;
     }
 
+    printf("\tafter adding to list\n");
+
 
     // Allocate a slot for new capability
-    err = mm_slot_alloc(mm, 1, &(node->cap.cap));
-    assert(!err_is_fail(err));
+    errval_t err = mm->slot_alloc(&(mm->slot_alloc_inst), 1, &(node->cap.cap));
+    assert(err_is_ok(err));
     
     // Initialize the original base and size
-    mm->initial_base = base;
-    mm->initial_size = size;
+    // mm->initial_base = base;
+    // mm->initial_size = size;
 
     // @TODO: initial_cap assign it with cap
+    mm->initial_cap = cap;
 
-    return err;
-
+    // return err;
     
     // @TODO: add it to the end
     // REVERSE list?
@@ -120,37 +120,37 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
     // mm->head = node;
     // node->free =  true;
 
-    
+    printf("/tleaving mm_add\n");
     return SYS_ERR_OK;
 }
 
-struct mmnode *mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *parent, genpaddr_t base, size_t size) {
+// struct mmnode *mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *parent, genpaddr_t base, size_t size) {
     
-    assert(prev);
-    struct mmnode *node = (struct mmnode *)slab_alloc(&mm->slabs);
-    assert(!node);
-    node->type = NodeType_Free;
-    node->free_children = 0;
-    node->parent = NULL;
+//     assert(prev);
+//     struct mmnode *node = (struct mmnode *)slab_alloc(&mm->slabs);
+//     assert(!node);
+//     node->type = NodeType_Free;
+//     node->free_children = 0;
+//     node->parent = NULL;
 
-    // create capinfo object
-    struct capinfo info;
-    info.cap = cap;
-    info.base = base;
-    info.size = size;
-    node->cap = info;
+//     // create capinfo object
+//     struct capinfo info;
+//     info.cap = cap;
+//     info.base = base;
+//     info.size = size;
+//     node->cap = info;
 
-    node->prev = parent;
-    node->next = parent->next;
-    parent->next->prev = node;
-    parent->next = node;
+//     node->prev = parent;
+//     node->next = parent->next;
+//     parent->next->prev = node;
+//     parent->next = node;
     
 
-    node->base = base;
-    node->size = size;
+//     node->base = base;
+//     node->size = size;
 
-    return node;
-}
+//     return node;
+// }
 
 /**
  * Allocate aligned physical memory.
@@ -162,6 +162,8 @@ struct mmnode *mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *pa
  */
 errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct capref *retcap)
 {
+    errval_t err;
+
     // make size page size aligned
     if (size % alignment != 0) {
         size += (size_t) BASE_PAGE_SIZE - (alignment % BASE_PAGE_SIZE);
@@ -184,129 +186,58 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
         err = mm->slot_alloc(&(mm->slot_alloc_inst), 1, &(curr->cap.cap));
         assert(err_is_ok(err));
 
-        cap_retype(new_node->cap.cap, mm->initial_cap, new_node->base - mm->initial_base, mm->objtype, size, 1);
+        cap_retype(curr->cap.cap, mm->initial_cap, curr->base, mm->objtype, size, 1);
+
+        *retcap = curr->cap.cap;
+    }
+    else {
+
+        genpaddr_t prev_addr = curr->base;
+        curr->size -= size; //todo case with size 0
+        curr->base += (genpaddr_t) size;
+
+        struct mmnode *prev = curr->prev;
+        // *curr = mm->head;
+        // while(curr) {
+        //     if (base < curr->base) {
+        //         if (curr->base > base + size) {
+        //             break;
+        //         }
+        //     }
+        //     prev = curr;
+        //     curr = curr->next;
+        // }
+
+        // create new node
+        struct mmnode *new_node = slab_alloc(&mm->slabs);
+        new_node->base = prev_addr;
+        new_node->size = size;
+        new_node->type = NodeType_Allocated;
+
+        new_node->next = curr;
+        new_node->prev = prev;
+
+        if (mm->head == NULL) {
+            mm->head = new_node;
+        }
+        if (prev) {
+            prev->next = new_node;
+        }
+
+        curr->cap.size -= size;
+        curr->cap.base += size;
+        new_node->cap.base = prev_addr;
+        new_node->cap.size = size;
+
+        err = mm->slot_alloc(&(mm->slot_alloc_inst), 1, &(new_node->cap.cap));
+        assert(err_is_ok(err));
+
+        cap_retype(new_node->cap.cap, mm->initial_cap, new_node->base, mm->objtype, size, 1);
 
         *retcap = new_node->cap.cap;
-    
-        return SYS_ERR_OK;
     }
-
-    genpaddr_t prev_addr = curr->base;
-    curr->size -= size; //todo case with size 0
-    curr->base += (genpaddr_t) size;
-
-    struct mmnode *prev = curr->prev;
-    // *curr = mm->head;
-    // while(curr) {
-    //     if (base < curr->base) {
-    //         if (curr->base > base + size) {
-    //             break;
-    //         }
-    //     }
-    //     prev = curr;
-    //     curr = curr->next;
-    // }
-
-    // create new node
-    struct mmnode *new_node = slab_alloc(&mm->slabs);
-    new_node->base = prev_addr;
-    new_node->size = size;
-    new_node->type = NodeType_Allocated;
-
-    new_node->next = curr;
-    new_node->prev = prev;
-
-    if (mm->head == NULL) {
-        mm->head = new_node;
-    }
-    if (prev) {
-        prev->next = new_node;
-    }
-
-    curr->cap.size -= size;
-    curr->cap.base += size;
-    new_node->cap.base = prev_attr;
-    new_node->cap.size = size;
-
-    err = mm->slot_alloc(&(mm->slot_alloc_inst), 1, &(new_node->cap.cap));
-    assert(err_is_ok(err));
-
-    cap_retype(new_node->cap.cap, mm->initial_cap, new_node->base - mm->initial_base, mm->objtype, size, 1);
-
-    *retcap = new_node->cap.cap;
-    
     return SYS_ERR_OK;
-
-    // if (size < alignment) {
-    //     size = alignment;
-    // } else {
-    //     size = size + (alignment - (size % alignment));
-    // }
-    // struct mmnode *curr = mm->head;
-    // size_t offset = 0;
-    // while (curr) {
-    //     if (!(curr->type == NodeType_Allocated || curr->size < size)) {
-    //         offset = alignment - (curr->base % alignment);
-    //         if (offset + size <= curr->size) {
-    //             break;
-    //         }
-    //     }
-    //     curr = curr->next;
-    // }
-
-    // assert(curr);
-    // if (!curr) {
-    //     // couldn't find a free region
-    //     //TODO: add correct error code
-    //     return -1;
-    // }
-    // // create a capability and mmnode for allocated memory going to user
-    // errval_t err = mm->slot_alloc(mm->slot_alloc_inst, 1, retcap);
-    // assert(err_is_ok(err));
-    // struct capinfo cap = curr->cap;
-    // err = cap_retype(retcap, cap.cap, offset, ObjType_RAM, size, 1);
-    // struct mmnode *allocated_space_node = mm_add_inspot(mm, &retcap, curr, offset, size);
-    // allocated_space_node->parent = curr;
-    // allocated_space_node->type = NodeType_Allocated;
-    // assert(err_is_ok(err));
-    
-    // curr->type = NodeType_Allocated;
-
-    // // add capability for remaining space (after)
-    // if (offset + size < curr->size) {
-    //     struct capref remainder;
-    //     err = mm->slot_alloc(mm->slot_alloc_inst, 1, &remainder);
-    //     assert(err_is_ok(err));
-    //     err = cap_retype(&remainder, cap.cap, offset + size, ObjType_RAM, curr->size - (offset + size), 1);
-    //     struct mmnode *next = mm_add_inspot(mm, &remainder, allocated_space_node, offset + size, curr->size - (offset + size));
-    //     next->type = NodeType_Free;
-    //     next->parent = curr;
-    // }
-    // // @NOTE: not needed 
-    // if (curr->parent != NULL) {
-    //     (curr->parent)->children--; 
-    // }
-    // curr->free_children = 1;
-    // return err;
 }
-
-// static bool can_allocate_in_list(struct mmnode *current_root, size_t size) {
-//     // go down the list while the child is != null
-//     while (current_root && (!current_root->free || current_root->size < size)) {
-//         current_root = current_root->n;
-//     }
-//     if (current_root && current_root->free && current_root->size >= size) {
-//         // retype
-//         // errval_t cap_retype(dest, src, offset, ObjType_RAM, size, 1);
-//         // create new mmnode, set references accordingly
-//         // may need to consider errval cap_retype returns, but for now don't worry
-//         // also consider effects this has on the cnode
-//         return true;
-//     }
-//     else {
-//         return false;
-//     }
-// }
 
 /**
  * Allocate physical memory.
@@ -337,7 +268,7 @@ errval_t mm_free(struct mm *mm, struct capref cap, genpaddr_t base, gensize_t si
         if (base >= curr->base && (base + size) <= (curr->base + curr->size)) {
             //free
             cap_destroy(curr->cap.cap);
-            curr->cap = NULL;
+            // curr->cap = NULL;
             //coalesce
             struct mmnode *left = curr->prev;
             struct mmnode *right = curr->next;
@@ -345,12 +276,12 @@ errval_t mm_free(struct mm *mm, struct capref cap, genpaddr_t base, gensize_t si
                 curr->base = left->base;
                 curr->size += left->size;
                 curr->prev = left->prev;
-                slab_free(mm->slabs, left);
+                slab_free(&(mm->slabs), left);
             }
             if (right && right->type == NodeType_Free) {
                 curr->size += right->size;
                 curr->next = right->next;
-                slab_free(mm->slabs, right);
+                slab_free(&(mm->slabs), right);
             }
 
         }

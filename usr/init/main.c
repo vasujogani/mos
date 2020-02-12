@@ -52,11 +52,14 @@ int main(int argc, char *argv[])
         DEBUG_ERR(err, "initialize_ram_alloc");
     }
 
+    printf("after initialize_ram_alloc\n");
     for (int i = 0; i < 32; i++) {
         printf("%c\n", i + 97);
-        struct retcap;
-        errval_t e = mm_alloc(&aos_mm, BASE_PAGE_SIZE, *retcap)
+        // struct capref retcap;
+        // err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap);
+        // assert(err_is_ok(err));
     }
+    printf("after for loop\n");
 
     debug_printf("Message handler loop\n");
     // Hang around
