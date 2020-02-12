@@ -75,6 +75,8 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
     node->type = NodeType_Free;
     node->base = base;
     node->size = size;
+    node->free_children = 0;
+    node->parent = NULL;
 
     // create capinfo object
     struct capinfo info;
@@ -103,6 +105,8 @@ struct mmnode *mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *pa
     struct mmnode *node = (struct mmnode *)slab_alloc(&mm->slabs);
     assert(!node);
     node->type = NodeType_Free;
+    node->free_children = 0;
+    node->parent = NULL;
 
     // create capinfo object
     struct capinfo info;
@@ -131,11 +135,11 @@ struct mmnode *mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *pa
  */
 errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct capref *retcap)
 {
-    // if (size < alignment) {
-    //     size = alignment;
-    // } else {
-    //     size = size + (alignment - (size % alignment));
-    // }
+    if (size < alignment) {
+        size = alignment;
+    } else {
+        size = size + (alignment - (size % alignment));
+    }
     struct mmnode *curr = mm->head;
     size_t offset = 0;
     while (curr) {
@@ -154,33 +158,29 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
         //TODO: add correct error code
         return -1;
     }
+    // create a capability and mmnode for allocated memory going to user
     errval_t err = mm->slot_alloc(mm->slot_alloc_inst, 1, retcap);
     assert(err_is_ok(err));
     struct capinfo cap = curr->cap;
     err = cap_retype(retcap, cap.cap, offset, ObjType_RAM, size, 1);
+    struct mmnode *allocated_space_node = mm_add_inspot(mm, &remainder, curr, offset + size, curr->size - (offset + size));
+    allocated_space_node->parent = curr;
     assert(err_is_ok(err));
     
-    // add capability for padding to aligned base address (before)
-    if (offset > 0) {
-        struct capref front_remainder;
-        err = mm->slot_alloc(mm->slot_alloc_inst, 1, remainder);
-        assert(err_is_ok(err));
-        mm_add_inspot(mm, &front_remainder, curr, curr->base, offset);
-        curr = mm_add_inspot(mm, &front_remainder, curr, curr->base, offset);
-    }
-
     // add capability for remaining space (after)
-    if (curr->size > size) {
+    if (offset + size < curr->size) {
         struct capref remainder;
-        err = slot_alloc(&remainder);
-            assert(err_is_ok(err));
-
-        err = cap_retype(&remainder, (curr->cap).cap, size, ObjType_RAM, curr->size - size, 1);
-            assert(err_is_ok(err));
-
-        err = mm_add_inspot(mm, &remainder, curr, curr->base + size, curr->size - size);
-        curr->type = NodeType_Allocated;
+        err = mm->slot_alloc(mm->slot_alloc_inst, 1, &remainder);
+        assert(err_is_ok(err));
+        err = cap_retype(&remainder, cap.cap, offset + size, ObjType_RAM, curr->size - (offset + size), 1);
+        struct mmnode *next = mm_add_inspot(mm, &remainder, curr, offset + size, curr->size - (offset + size));
+        next->parent = curr;
     }
+    curr->type = NodeType_Allocated;
+    if (curr->parent != NULL) {
+        (curr->parent)->children--; 
+    }
+    curr->free_children = 1;
     return err;
 }
 
@@ -211,19 +211,7 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
  */
 errval_t mm_alloc(struct mm *mm, size_t size, struct capref *retcap)
 {
-
-
-    // bool allocated = false;
-    // struct mmnode *current_root = mm->head;
-    // while (current_root->next && !allocated) {
-    //     //can we allocate in this list?
-    //     can_allocate_in_list(current_root, size);
-    //     current_root = current_root->next;
-    // }
-    // if (!allocated)
-    // {
-    //     //error
-    // }  
+    return mm_alloc_aligned(mm, size, BASE_PAGE_SIZE, retcap);
 }
 
 /**
@@ -236,6 +224,7 @@ errval_t mm_alloc(struct mm *mm, size_t size, struct capref *retcap)
  */
 errval_t mm_free(struct mm *mm, struct capref cap, genpaddr_t base, gensize_t size)
 {
+
     // iterate through and find the position in the list, and then coalesce recursively
     // if any node is equal to prev, remove curr node
     struct mmnode *curr = mm->head;
