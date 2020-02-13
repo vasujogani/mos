@@ -200,21 +200,13 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
     if (vaddr % BASE_PAGE_SIZE != 0) {
         vaddr -= vaddr % BASE_PAGE_SIZE;
     }
-
-    // determine pte_count based on size of frame
-    // call slot_alloc to get a capref for mapping
-    struct capref mapping;
+    
     errval_t err;
-    err = st->slot_alloc->alloc(st->slot_alloc, &mapping);
-    if (err_is_fail(err)) {
-        debug_printf("slot_alloc failed: %s\n", err_getstring(err));
-        return err;
-    }
 
     struct capref l2;
     // check if l2 pt already exists
-    if (st->l2_pts[ARM_L2_OFFSET(vaddr)].initialized == true) {
-        l2 = st->l2_pts[ARM_L2_OFFSET(vaddr)].cap;
+    if (st->l2_pts[ARM_L1_OFFSET(vaddr)].initialized == true) {
+        l2 = st->l2_pts[ARM_L1_OFFSET(vaddr)].cap;
     }
     // otherwise, allocate the l2 pt
     else {
@@ -239,8 +231,8 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
         }
         
         // update the page_info struct to include the new l2 pt
-        st->l2_pts[ARM_L2_OFFSET(vaddr)].initialized = true;
-        st->l2_pts[ARM_L2_OFFSET(vaddr)].cap = l2;
+        st->l2_pts[ARM_L1_OFFSET(vaddr)].initialized = true;
+        st->l2_pts[ARM_L1_OFFSET(vaddr)].cap = l2;
     }
    
     // need to determine the pte_count based on the size of the frame
@@ -251,10 +243,21 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
     //     debug_printf("frame_identify failed: %s\n", err_getstring(err));
     // } 
     
+    // determine pte_count based on size of frame
+    // call slot_alloc to get a capref for mapping ???
+    struct capref mapping;
+    
+    err = st->slot_alloc->alloc(st->slot_alloc, &mapping);
+    if (err_is_fail(err)) {
+        debug_printf("slot_alloc failed: %s\n", err_getstring(err));
+        return err;
+    }
+
     // round bytes up to page size to get the number of ptes needed to be mapped
     if (bytes % BASE_PAGE_SIZE != 0) {
         bytes += (size_t) BASE_PAGE_SIZE - (bytes % BASE_PAGE_SIZE);
     }
+
     int pte_count = bytes / BASE_PAGE_SIZE;
     err = vnode_map(l2, frame, ARM_L2_OFFSET(vaddr), flags, 0, pte_count, mapping);
     if (err_is_fail(err)) {

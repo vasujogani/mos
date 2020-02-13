@@ -100,40 +100,40 @@ errval_t initialize_ram_alloc(void)
 
     int i;
 
-    // for (i=0; i < 50; i++) {
-    //     struct capref cr;
-    //     mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
-    //     if (i%50 == 0) {
-    //         printf("Allocated %i chunck of size %u\n", i, BASE_PAGE_SIZE);
-    //     }
-    // }
-
-// //713,457
-    for (i=0; i < 30000; i++) {
+    for (i=0; i < 3000; i++) {
         struct capref cr;
         mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
-        
-        struct frame_identity fi;
-        err = frame_identify(cr, &fi);
-        
-        mm_free(&aos_mm, cr, fi.base, BASE_PAGE_SIZE * 500 );
-
-
         if (i%50 == 0) {
             printf("Allocated %i chunck of size %u\n", i, BASE_PAGE_SIZE);
         }
     }
-    mm_print(&aos_mm);
-    printf("AFTER\n");
 
-     struct capref cr;
-        mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
-            // mm_print(&aos_mm);
-
-        struct frame_identity fi;
-        err = frame_identify(cr, &fi);
+// //713,457
+    // for (i=0; i < 30000; i++) {
+    //     struct capref cr;
+    //     mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
         
-        mm_free(&aos_mm, cr, fi.base, BASE_PAGE_SIZE * 500 );
+    //     struct frame_identity fi;
+    //     err = frame_identify(cr, &fi);
+        
+    //     mm_free(&aos_mm, cr, fi.base, BASE_PAGE_SIZE * 500 );
+
+
+    //     if (i%50 == 0) {
+    //         printf("Allocated %i chunck of size %u\n", i, BASE_PAGE_SIZE);
+    //     }
+    // }
+    // mm_print(&aos_mm);
+    // printf("AFTER\n");
+
+    //  struct capref cr;
+    //     mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
+    //         // mm_print(&aos_mm);
+
+    //     struct frame_identity fi;
+    //     err = frame_identify(cr, &fi);
+        
+    //     mm_free(&aos_mm, cr, fi.base, BASE_PAGE_SIZE * 500 );
     // mm_print(&aos_mm);
     //     mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
     //         mm_print(&aos_mm);

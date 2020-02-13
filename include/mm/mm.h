@@ -63,6 +63,7 @@ struct mm {
     genpaddr_t initial_base;
     size_t initial_size;
     struct capref initial_cap;
+    bool refillingslabs;
 };
 
 errval_t mm_init(struct mm *mm, enum objtype objtype,

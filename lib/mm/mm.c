@@ -31,6 +31,7 @@ errval_t mm_init(struct mm *mm, enum objtype objtype,
 	mm->objtype = objtype;
 	mm->slot_alloc_inst = slot_alloc_inst;
 	mm->head = NULL;
+	mm->refillingslabs = false;
 
 	if(slab_refill_func == NULL){
 	        slab_refill_func = slab_default_refill;
@@ -53,10 +54,12 @@ errval_t mm_init(struct mm *mm, enum objtype objtype,
 void mm_destroy(struct mm *mm)
 {
     struct mmnode *curr = mm->head;
+	struct mmnode *next = curr;
     while(curr) {
         cap_destroy(curr->cap.cap);
-        curr->type = NodeType_Free;
+		next = curr->next;
         slab_free(&mm->slabs, &curr);
+		curr = next;
     }
 }
 
@@ -109,34 +112,6 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
 
 }
 
-// struct mmnode *mm_add_inspot(struct mm *mm, struct capref cap, struct mmnode *parent, genpaddr_t base, size_t size) {
-    
-//     assert(prev);
-//     struct mmnode *node = (struct mmnode *)slab_alloc(&mm->slabs);
-//     assert(!node);
-//     node->type = NodeType_Free;
-//     node->free_children = 0;
-//     node->parent = NULL;
-
-//     // create capinfo object
-//     struct capinfo info;
-//     info.cap = cap;
-//     info.base = base;
-//     info.size = size;
-//     node->cap = info;
-
-//     node->prev = parent;
-//     node->next = parent->next;
-//     parent->next->prev = node;
-//     parent->next = node;
-    
-
-//     node->base = base;
-//     node->size = size;
-
-//     return node;
-// }
-
 /**
  * Allocate aligned physical memory.
  *
@@ -149,7 +124,6 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
 {
 	struct slot_prealloc *sp = (struct slot_prealloc*) mm->slot_alloc_inst;
 	if (sp->meta[0].free < 3 && sp->meta[1].free < 3 && !sp->refilling) {
-		printf("refilling\n");
 		sp->refilling = true;
 		errval_t err = mm->slot_refill(mm->slot_alloc_inst);
 		sp->refilling = false;
@@ -168,6 +142,16 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
 		if (curr->type == NodeType_Free) {
 			if (curr->size >= size) {
 				size_t remaining = curr->size - size;
+				errval_t err;
+				if (slab_freecount(&mm->slabs) < 4 && ! mm->refillingslabs) {
+					mm->refillingslabs = true;
+					err = mm->slabs.refill_func(&mm->slabs);
+					mm->refillingslabs = false;
+
+					if (err_is_fail(err)) {
+						return err;
+					}
+				}
 				struct mmnode *new_node = (struct mmnode*) slab_alloc(&mm->slabs);
 
 				assert(new_node != NULL);
@@ -185,7 +169,7 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
 				}
 
 
-				errval_t err = mm->slot_alloc(mm->slot_alloc_inst, 1, &(new_node->cap.cap));
+				err = mm->slot_alloc(mm->slot_alloc_inst, 1, &(new_node->cap.cap));
 				assert(err_is_ok(err));
 
 

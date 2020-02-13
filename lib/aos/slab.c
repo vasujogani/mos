@@ -18,6 +18,10 @@
 #include <aos/aos.h>
 #include <aos/slab.h>
 #include <aos/static_assert.h>
+#include <mm/mm.h>
+
+// lvaddr_t faddr = 0x10000000;
+lvaddr_t faddr = sizeof(struct mmnode)*64;
 
 struct block_head {
     struct block_head *next;///< Pointer to next block in free list
@@ -50,22 +54,16 @@ void slab_init(struct slab_allocator *slabs, size_t blocksize,
  */
 void slab_grow(struct slab_allocator *slabs, void *buf, size_t buflen)
 {
-    // printf("entering slab_grow\n");
-    // printf("free_blocks: %d\n", slabs->free_blocks);
     /* setup slab_head structure at top of buffer */
     assert(buflen > sizeof(struct slab_head));
     struct slab_head *head = buf;
     buflen -= sizeof(struct slab_head);
     buf = (char *)buf + sizeof(struct slab_head);
-
     /* calculate number of blocks in buffer */
     size_t blocksize = slabs->blocksize;
     assert(buflen / blocksize <= UINT32_MAX);
     head->free = head->total = buflen / blocksize;
-    // slabs->free_blocks += head->free;
-    // printf("free_blocks: %d\n", slabs->free_blocks);
     assert(head->total > 0);
-
     /* enqueue blocks in freelist */
     struct block_head *bh = head->blocks = buf;
     for (uint32_t i = head->total; i > 1; i--) {
@@ -117,10 +115,6 @@ void *slab_alloc(struct slab_allocator *slabs)
     assert(bh != NULL);
     sh->blocks = bh->next;
     sh->free--;
-    // slabs->free_blocks--;
-    // if (slabs->free_blocks <= 5) {
-    //     slab_default_refill(slabs);
-    // }
 
     return bh;
 }
@@ -187,30 +181,21 @@ size_t slab_freecount(struct slab_allocator *slabs)
  */
 static errval_t slab_refill_pages(struct slab_allocator *slabs, size_t bytes)
 {
+    struct capref frame;
+    size_t fsize = 0;
     errval_t err;
-    static bool is_refilling = false;
-    if (is_refilling) {
-        return SYS_ERR_OK;
+    
+    // int num_pages = (bytes / BASE_PAGE_SIZE) + (bytes % BASE_PAGE_SIZE == 0 ? 0 : 1);
+    
+    err = frame_alloc(&frame, bytes, &fsize);
+    if (err_is_fail(err)) {
+        return err;
     }
-    is_refilling = true;
-    // printf("entering slab refill\n");
-    // printf("free_blocks: %d\n", slabs->free_blocks);
-    int num_pages = (bytes / BASE_PAGE_SIZE) + (bytes % BASE_PAGE_SIZE == 0 ? 0 : 1);
-    for (int i = 0; i < num_pages; i++) {
-        struct capref frame;
-        frame_alloc(&frame, BASE_PAGE_SIZE, NULL);
-        paging_map_fixed_attr(get_current_paging_state(), BASE_PAGE_SIZE * i,
-            frame, BASE_PAGE_SIZE, VREGION_FLAGS_READ_WRITE);
-        struct frame_identity fi;
-        err = frame_identify(frame, &fi);
-        if (err_is_fail(err)) {
-            debug_printf("frame_identify: %s\n", err_getstring(err));
-            is_refilling = false;
-            return err;
-        }
-        slab_grow(slabs, (void *)((long)fi.base), fi.bytes);
-    }
-    is_refilling = false;
+    paging_map_fixed_attr(get_current_paging_state(), faddr, frame, fsize, VREGION_FLAGS_READ_WRITE);
+    slab_grow(slabs, (void *)(faddr), bytes);
+    // faddr += 0x05000000;
+    faddr +=  sizeof(struct mmnode)*64;
+
     return err;
 }
 
