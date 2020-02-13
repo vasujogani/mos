@@ -1,4 +1,4 @@
-/**
+**
  * \file
  * \brief Simple slab allocator.
  *
@@ -50,8 +50,6 @@ void slab_init(struct slab_allocator *slabs, size_t blocksize,
  */
 void slab_grow(struct slab_allocator *slabs, void *buf, size_t buflen)
 {
-    // printf("entering slab_grow\n");
-    // printf("free_blocks: %d\n", slabs->free_blocks);
     /* setup slab_head structure at top of buffer */
     assert(buflen > sizeof(struct slab_head));
     struct slab_head *head = buf;
@@ -62,8 +60,6 @@ void slab_grow(struct slab_allocator *slabs, void *buf, size_t buflen)
     size_t blocksize = slabs->blocksize;
     assert(buflen / blocksize <= UINT32_MAX);
     head->free = head->total = buflen / blocksize;
-    // slabs->free_blocks += head->free;
-    // printf("free_blocks: %d\n", slabs->free_blocks);
     assert(head->total > 0);
 
     /* enqueue blocks in freelist */
@@ -89,38 +85,20 @@ void slab_grow(struct slab_allocator *slabs, void *buf, size_t buflen)
  */
 void *slab_alloc(struct slab_allocator *slabs)
 {
-    // printf("free_blocks: %d\n", slab_freecount(slabs));
-    errval_t err;
     /* find a slab with free blocks */
+    printf("Num free slabs is %i\n", slab_freecount(slabs));
     struct slab_head *sh;
     for (sh = slabs->slabs; sh != NULL && sh->free == 0; sh = sh->next);
-
-    if (sh == NULL ) {
-        /* out of memory. try refill function if we have one */
-        if (!slabs->refill_func) {
-            return NULL;
-        } else {
-            err = slabs->refill_func(slabs);
-            if (err_is_fail(err)) {
-                DEBUG_ERR(err, "slab refill_func failed");
-                return NULL;
-            }
-            for (sh = slabs->slabs; sh != NULL && sh->free == 0; sh = sh->next);
-            if (sh == NULL) {
-                return NULL;
-            }
-        }
-    }
 
     /* dequeue top block from freelist */
     struct block_head *bh = sh->blocks;
     assert(bh != NULL);
     sh->blocks = bh->next;
     sh->free--;
-    // slabs->free_blocks--;
-    // if (slabs->free_blocks <= 5) {
-    //     slab_default_refill(slabs);
-    // }
+
+    if (slab_freecount(slabs) <= 20) {
+        slab_default_refill(slabs);    
+    }
 
     return bh;
 }
@@ -187,30 +165,30 @@ size_t slab_freecount(struct slab_allocator *slabs)
  */
 static errval_t slab_refill_pages(struct slab_allocator *slabs, size_t bytes)
 {
-    errval_t err;
-    static bool is_refilling = false;
-    if (is_refilling) {
-        return SYS_ERR_OK;
+    static bool refilling = false;
+    if (refilling) {
+        return 0;
     }
-    is_refilling = true;
-    // printf("entering slab refill\n");
-    // printf("free_blocks: %d\n", slabs->free_blocks);
+    refilling = true;
+
     int num_pages = (bytes / BASE_PAGE_SIZE) + (bytes % BASE_PAGE_SIZE == 0 ? 0 : 1);
+    errval_t err;
     for (int i = 0; i < num_pages; i++) {
         struct capref frame;
         frame_alloc(&frame, BASE_PAGE_SIZE, NULL);
+        printf("A\n");
         paging_map_fixed_attr(get_current_paging_state(), BASE_PAGE_SIZE * i,
             frame, BASE_PAGE_SIZE, VREGION_FLAGS_READ_WRITE);
+        printf("B\n");
         struct frame_identity fi;
         err = frame_identify(frame, &fi);
         if (err_is_fail(err)) {
-            debug_printf("frame_identify: %s\n", err_getstring(err));
-            is_refilling = false;
-            return err;
+            break;
         }
-        slab_grow(slabs, (void *)((long)fi.base), fi.bytes);
+        slab_grow(slabs, (void *)((long)(BASE_PAGE_SIZE * i)), fi.bytes);
+        printf("C\n");
     }
-    is_refilling = false;
+    refilling = false;
     return err;
 }
 
