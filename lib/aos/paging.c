@@ -250,6 +250,8 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
     // if (err_is_fail(err)) {
     //     debug_printf("frame_identify failed: %s\n", err_getstring(err));
     // } 
+    
+    // round bytes up to page size to get the number of ptes needed to be mapped
     if (bytes % BASE_PAGE_SIZE != 0) {
         bytes += (size_t) BASE_PAGE_SIZE - (bytes % BASE_PAGE_SIZE);
     }

@@ -147,6 +147,9 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
  */
 errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct capref *retcap)
 {
+    if (slab_freecount(&mm->slabs) <= 5) {
+        slab_default_refill(&mm->slabs);
+    }
 	if (alignment < BASE_PAGE_SIZE) {
 		alignment = BASE_PAGE_SIZE;
 	}
