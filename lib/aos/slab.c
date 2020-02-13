@@ -163,7 +163,6 @@ size_t slab_freecount(struct slab_allocator *slabs)
  */
 static errval_t slab_refill_pages(struct slab_allocator *slabs, size_t bytes)
 {
-<<<<<<< HEAD
     struct capref frame;
     size_t fsize = 0;
     errval_t err;
@@ -179,32 +178,6 @@ static errval_t slab_refill_pages(struct slab_allocator *slabs, size_t bytes)
     // faddr += 0x05000000;
     faddr +=  sizeof(struct mmnode)*64;
 
-=======
-    static bool refilling = false;
-    if (refilling) {
-        return 0;
-    }
-    refilling = true;
-
-    int num_pages = (bytes / BASE_PAGE_SIZE) + (bytes % BASE_PAGE_SIZE == 0 ? 0 : 1);
-    errval_t err;
-    for (int i = 0; i < num_pages; i++) {
-        struct capref frame;
-        frame_alloc(&frame, BASE_PAGE_SIZE, NULL);
-        printf("A\n");
-        paging_map_fixed_attr(get_current_paging_state(), BASE_PAGE_SIZE * i,
-            frame, BASE_PAGE_SIZE, VREGION_FLAGS_READ_WRITE);
-        printf("B\n");
-        struct frame_identity fi;
-        err = frame_identify(frame, &fi);
-        if (err_is_fail(err)) {
-            break;
-        }
-        slab_grow(slabs, (void *)((long)(BASE_PAGE_SIZE * i)), fi.bytes);
-        printf("C\n");
-    }
-    refilling = false;
->>>>>>> 46471bd885e8fe3ae0e945aae397f7f728e058dd
     return err;
 }
 
