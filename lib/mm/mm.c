@@ -47,20 +47,24 @@ errval_t mm_init(struct mm *mm, enum objtype objtype,
 
 }
 
-
 /**
  * Destroys the memory allocator.
  */
-void mm_destroy(struct mm *mm)
+errval_t mm_destroy(struct mm *mm)
 {
+	errval_t err;
     struct mmnode *curr = mm->head;
 	struct mmnode *next = curr;
     while(curr) {
-        cap_destroy(curr->cap.cap);
+        err = cap_destroy(curr->cap.cap);
+        if (err_is_fail(err)) {
+	        return err;
+	    }
 		next = curr->next;
         slab_free(&mm->slabs, &curr);
 		curr = next;
     }
+    return SYS_ERR_OK;
 }
 
 /**
@@ -75,7 +79,7 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
 	errval_t err;
 	debug_printf("Adding a capability of size %i B at %zx \n", size , base);
 	struct mmnode *node = (struct mmnode*) slab_alloc(&mm->slabs);
-       	assert(node != NULL);
+    assert(node != NULL);
 	node->cap.base = base;
 	node->cap.size = size;
 
@@ -100,13 +104,14 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
 	mm->initial_base = base;
 	mm->initial_cap = cap;
 
-	mm->slot_alloc(mm->slot_alloc_inst, 1, &(node->cap.cap));
+	err = mm->slot_alloc(mm->slot_alloc_inst, 1, &(node->cap.cap));
+	if (err_is_fail(err)) {
+        return err;
+    }
 	err = cap_retype(node->cap.cap, mm->initial_cap, 0, mm->objtype, (gensize_t) size, 1);
-
-	// mm->slot_alloc(mm->slot_alloc_inst, 1, &(mm->initial_cap));
-	// err = cap_retype(mm->initial_cap, cap, 0, mm->objtype, (gensize_t) size, 1);
-
-	assert(err_is_ok(err));
+	if (err_is_fail(err)) {
+        return err;
+    }
 
 	return SYS_ERR_OK;
 
@@ -170,15 +175,14 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
 
 
 				err = mm->slot_alloc(mm->slot_alloc_inst, 1, &(new_node->cap.cap));
-				assert(err_is_ok(err));
-
+				if (err_is_fail(err)) {
+			        return err;
+			    }
 
 				err = cap_retype(new_node->cap.cap, mm->initial_cap, curr->base - mm->initial_base , mm->objtype, size, 1);
-				assert(err_is_ok(err));
-				// if (err_is_fail(err)) {
-				// 	mm_print(mm);
-				// 	assert(err_is_ok(err));
-				// }
+				if (err_is_fail(err)) {
+			        return err;
+			    }
 
 				new_node->base = curr->base;
 				new_node->size = size;
@@ -219,12 +223,16 @@ errval_t mm_alloc(struct mm *mm, size_t size, struct capref *retcap)
  */
 errval_t mm_free(struct mm *mm, struct capref cap, genpaddr_t base, gensize_t size)
 {
+	errval_t err;
 	struct mmnode *curr = mm->head;
 	while (curr) {
 		if (curr->base == base && curr->size == size) {
 			curr->type = NodeType_Free;
 							
-			cap_destroy(curr->cap.cap);
+			err = cap_destroy(curr->cap.cap);
+			if (err_is_fail(err)) {
+		        return err;
+		    }
 						
 			if (curr->next && curr->next->type == NodeType_Free) {
 				curr->size += curr->next->size;

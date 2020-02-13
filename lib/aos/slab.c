@@ -1,4 +1,4 @@
-**
+/**
  * \file
  * \brief Simple slab allocator.
  *
@@ -167,18 +167,19 @@ static errval_t slab_refill_pages(struct slab_allocator *slabs, size_t bytes)
     size_t fsize = 0;
     errval_t err;
     
-    // int num_pages = (bytes / BASE_PAGE_SIZE) + (bytes % BASE_PAGE_SIZE == 0 ? 0 : 1);
-    
     err = frame_alloc(&frame, bytes, &fsize);
     if (err_is_fail(err)) {
         return err;
     }
-    paging_map_fixed_attr(get_current_paging_state(), faddr, frame, fsize, VREGION_FLAGS_READ_WRITE);
+    err = paging_map_fixed_attr(get_current_paging_state(), faddr, frame, fsize, VREGION_FLAGS_READ_WRITE);
+    if (err_is_fail(err)) {
+        return err;
+    }
+    
     slab_grow(slabs, (void *)(faddr), bytes);
-    // faddr += 0x05000000;
     faddr +=  sizeof(struct mmnode)*64;
 
-    return err;
+    return SYS_ERR_OK;
 }
 
 /**
