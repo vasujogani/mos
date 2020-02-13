@@ -98,8 +98,8 @@ errval_t initialize_ram_alloc(void)
         return err_push(err, LIB_ERR_RAM_ALLOC_SET);
     }
 
+    // // test1 large alloc
     int i;
-
     for (i=0; i < 3000; i++) {
         struct capref cr;
         mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
@@ -108,42 +108,72 @@ errval_t initialize_ram_alloc(void)
         }
     }
 
-// //713,457
-    // for (i=0; i < 30000; i++) {
+    // // test2 alloc + free
+    // int i;
+    // for (i=0; i < 300000; i++) {
     //     struct capref cr;
-    //     mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
-        
-    //     struct frame_identity fi;
-    //     err = frame_identify(cr, &fi);
-        
-    //     mm_free(&aos_mm, cr, fi.base, BASE_PAGE_SIZE * 500 );
+    //     err = mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
+    //     assert(err_is_ok(err));
 
+    //     struct frame_identity f;
+    //     err = frame_identify(cr, &f);
+    //     assert(err_is_ok(err));
 
-    //     if (i%50 == 0) {
-    //         printf("Allocated %i chunck of size %u\n", i, BASE_PAGE_SIZE);
-    //     }
+    //     err = mm_free(&aos_mm, cr, f.base, f.bytes);
+    //     assert(err_is_ok(err));
     // }
+
+    // // test3 free coalesce
+    // //allocate 4
+    // struct capref retcap1;
+    // err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap1);
+    // assert(err_is_ok(err));
+
+    // struct capref retcap2;
+    // err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap2);
+    // assert(err_is_ok(err));
+
+    // struct capref retcap3;
+    // err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap3);
+    // assert(err_is_ok(err));
+
+    // struct capref retcap4;
+    // err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap4);
+    // assert(err_is_ok(err));
+
     // mm_print(&aos_mm);
-    // printf("AFTER\n");
 
-    //  struct capref cr;
-    //     mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
-    //         // mm_print(&aos_mm);
+    // //free middle 2
+    // struct frame_identity f2;
+    // err = frame_identify(retcap2, &f2);
+    // assert(err_is_ok(err));
+    // err = mm_free(&aos_mm, retcap2, f2.base, f2.bytes);
+    // assert(err_is_ok(err));
 
-    //     struct frame_identity fi;
-    //     err = frame_identify(cr, &fi);
-        
-    //     mm_free(&aos_mm, cr, fi.base, BASE_PAGE_SIZE * 500 );
-    // mm_print(&aos_mm);
-    //     mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
-    //         mm_print(&aos_mm);
+    // struct frame_identity f3;
+    // err = frame_identify(retcap3, &f3);
+    // assert(err_is_ok(err));
+    // err = mm_free(&aos_mm, retcap3, f3.base, f3.bytes);
+    // assert(err_is_ok(err));
 
-    //     err = frame_identify(cr, &fi);
-        
-    //     mm_free(&aos_mm, cr, fi.base, BASE_PAGE_SIZE * 500 );
     // mm_print(&aos_mm);
 
+    // //allocate a big one
+    // struct capref retcap5;
+    // err = mm_alloc(&aos_mm, BASE_PAGE_SIZE * 2, &retcap5);
+    // assert(err_is_ok(err));
 
+    // mm_print(&aos_mm);
+
+    // struct frame_identity f1;
+    // err = frame_identify(retcap1, &f1);
+    // assert(err_is_ok(err));
+
+    // struct frame_identity f5;
+    // err = frame_identify(retcap5, &f5);
+    // assert(err_is_ok(err));
+
+    // assert(f1.base + f1.bytes == f5.base);    
 
     return SYS_ERR_OK;
 }
