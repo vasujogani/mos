@@ -181,12 +181,12 @@ static errval_t slab_refill_pages(struct slab_allocator *slabs, size_t bytes)
     int num_pages = (bytes / BASE_PAGE_SIZE) + (bytes % BASE_PAGE_SIZE == 0 ? 0 : 1);
     for (int i = 0; i < num_pages; i++) {
         struct capref frame;
-        frame_alloc(frame, BASE_PAGE_SIZE, NULL);
+        frame_alloc(&frame, BASE_PAGE_SIZE, NULL);
         paging_map_fixed_attr(get_current_paging_state(), BASE_PAGE_SIZE * i,
             frame, BASE_PAGE_SIZE, VREGION_FLAGS_READ_WRITE);
         struct frame_identity fi;
         err = frame_identify(frame, &fi);
-        slab_grow(slabs, (void *)fi.base, fi.bytes);
+        slab_grow(slabs, (void *)((long)fi.base), fi.bytes);
     }
 }
 
