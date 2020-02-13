@@ -23,7 +23,6 @@ errval_t mm_init(struct mm *mm, enum objtype objtype,
                  slot_refill_t slot_refill_func,
                  void *slot_alloc_inst)
 {
-	debug_printf("libmm: Initializing...\n");
 	assert(mm != NULL);
 
 	mm->slot_alloc = slot_alloc_func;
@@ -41,7 +40,7 @@ errval_t mm_init(struct mm *mm, enum objtype objtype,
 	struct slot_prealloc *sp = (struct slot_prealloc*) mm->slot_alloc_inst;
 	sp->mm = mm;			
 
-	debug_printf("initialized\n");
+	debug_printf("MM Initialized\n");
 	return SYS_ERR_OK;
 
 
@@ -77,7 +76,6 @@ errval_t mm_destroy(struct mm *mm)
 errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
 {
 	errval_t err;
-	debug_printf("Adding a capability of size %i B at %zx \n", size , base);
 	struct mmnode *node = (struct mmnode*) slab_alloc(&mm->slabs);
     assert(node != NULL);
 	node->cap.base = base;
@@ -268,11 +266,11 @@ void mm_print(struct mm *mm) {
 	while (n) {
 		struct frame_identity f;
 		frame_identify(n->cap.cap, &f);
-		printf("    Node %d: start: %zx, size: %"PRIu64" KB - Cap says: base: %zx size: %"PRIu64" KB - ", idx, n->base, n->size / 1024 , f.base, f.bytes / 1024);
+		printf("    MMNNODE %d: start: %zx, size: %"PRIu64" KB - Cap: base: %zx size: %"PRIu64" KB - ", idx, n->base, n->size / 1024 , f.base, f.bytes / 1024);
 		if (n->type == NodeType_Free) {
-			printf("Node F\n");
+			printf("== Free\n");
 		} else {
-			printf("Node A \n");
+			printf("== Allocated \n");
 		}
 		n = n->next;
 		idx++;

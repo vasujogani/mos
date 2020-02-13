@@ -59,7 +59,6 @@ errval_t initialize_ram_alloc(void)
                   slot_alloc_prealloc, slot_prealloc_refill,
                   &init_slot_alloc);
 
-    printf("\tpast mm_init\n");
     if (err_is_fail(err)) {
         USER_PANIC_ERR(err, "Can't initalize the memory manager.");
     }
@@ -93,7 +92,6 @@ errval_t initialize_ram_alloc(void)
             mem_cap.slot++;
         }
     }
-    printf("\texited loop\n");
     debug_printf("Added %"PRIu64" MB of physical memory.\n", mem_avail / 1024 / 1024);
 
     // Finally, we can initialize the generic RAM allocator to use our local allocator
@@ -111,18 +109,18 @@ errval_t initialize_ram_alloc(void)
 
 void test1(void) {
     // test1 large alloc
+    debug_printf("****Start Test 1 ====== allocating 3000 times\n");
     int i;
     for (i=0; i < 3000; i++) {
         struct capref cr;
         mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
-        if (i%50 == 0) {
-            printf("Allocated %i chunck of size %u\n", i, BASE_PAGE_SIZE);
-        }
     }
+    debug_printf("****Done with Test 1\n");
 }
 
 void test2(void) {
     // test2 alloc + free
+    debug_printf("****Start Test 2 ====== allocating and freeing 300,000 times\n");
     errval_t err;
     int i;
     for (i=0; i < 300000; i++) {
@@ -137,11 +135,13 @@ void test2(void) {
         err = mm_free(&aos_mm, cr, f.base, f.bytes);
         assert(err_is_ok(err));
     }
+    debug_printf("****Done with Test 2\n");
 }
 
 void test3(void) {
     // test3 free coalesce
     //allocate 4
+    debug_printf("****Start Test 3 ====== Allocate 4 times, and remove middle to test coalesce\n");
     errval_t err;
     struct capref retcap1;
     err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap1);
@@ -192,4 +192,5 @@ void test3(void) {
     assert(err_is_ok(err));
 
     assert(f1.base + f1.bytes == f5.base);    
+    debug_printf("****Done with Test 3\n");
 }

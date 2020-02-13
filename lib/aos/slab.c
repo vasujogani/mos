@@ -88,7 +88,6 @@ void slab_grow(struct slab_allocator *slabs, void *buf, size_t buflen)
 void *slab_alloc(struct slab_allocator *slabs)
 {
     /* find a slab with free blocks */
-    printf("Num free slabs is %i\n", slab_freecount(slabs));
     struct slab_head *sh;
     for (sh = slabs->slabs; sh != NULL && sh->free == 0; sh = sh->next);
 
