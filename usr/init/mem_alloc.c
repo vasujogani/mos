@@ -78,7 +78,7 @@ errval_t initialize_ram_alloc(void)
         if (bi->regions[i].mr_type == RegionType_Empty) {
             printf("\tregion type was empty\n");
             err = mm_add(&aos_mm, mem_cap, bi->regions[i].mr_base, bi->regions[i].mr_bytes);
-            printf("\tafter mm_add\n");
+            mm_print(&aos_mm);
             if (err_is_ok(err)) {
                 mem_avail += bi->regions[i].mr_bytes;
             } else {
@@ -103,6 +103,41 @@ errval_t initialize_ram_alloc(void)
     if (err_is_fail(err)) {
         return err_push(err, LIB_ERR_RAM_ALLOC_SET);
     }
+
+    int i;
+
+        mm_print(&aos_mm);
+
+    for (i=0; i < 50; i++) {
+        struct capref cr;
+        mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
+        if (i%50 == 0) {
+            printf("Allocated %i chunck of size %u\n", i, BASE_PAGE_SIZE);
+        }
+    }
+
+    for (i=0; i < 1500; i++) {
+        struct capref cr;
+        mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
+        
+        struct frame_identity fi;
+        err = frame_identify(cr, &fi);
+        
+        mm_free(&aos_mm, cr, fi.base, BASE_PAGE_SIZE * 500 );
+
+
+        if (i%50 == 0) {
+            printf("Allocated %i chunck of size %u\n", i, BASE_PAGE_SIZE);
+        }
+    }
+    // mm_print(&aos_mm);
+    // printf("AFTER\n");
+
+    // struct capref cr;
+    // mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
+    mm_print(&aos_mm);
+
+
 
     return SYS_ERR_OK;
 }
