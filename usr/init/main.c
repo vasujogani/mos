@@ -52,19 +52,6 @@ int main(int argc, char *argv[])
         DEBUG_ERR(err, "initialize_ram_alloc");
     }
 
-    printf("after initialize_ram_alloc\n");
-    for (int i = 0; i < 5; i++) {
-        printf("%i\n", i);
-        struct capref retcap;
-        err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap);
-        mm_print(&aos_mm);
-        printf("\n\n");
-        assert(err_is_ok(err));
-        // mm_free(&aos_mm, retcap, retcap.base, retcap.size);
-        assert(err_is_ok(err));
-    }
-    printf("after for loop\n");
-
     debug_printf("Message handler loop\n");
     // Hang around
     struct waitset *default_ws = get_default_waitset();

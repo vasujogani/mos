@@ -71,27 +71,21 @@ errval_t initialize_ram_alloc(void)
         .slot = 0,
     };
 
-    printf("\tnum regions: %d\n", bi->regions_length);
 
     for (int i = 0; i < bi->regions_length; i++) {
-        printf("\tlooping\n");
         if (bi->regions[i].mr_type == RegionType_Empty) {
-            printf("\tregion type was empty\n");
             err = mm_add(&aos_mm, mem_cap, bi->regions[i].mr_base, bi->regions[i].mr_bytes);
-            mm_print(&aos_mm);
             if (err_is_ok(err)) {
                 mem_avail += bi->regions[i].mr_bytes;
             } else {
                 DEBUG_ERR(err, "Warning: adding RAM region %d (%p/%zu) FAILED", i, bi->regions[i].mr_base, bi->regions[i].mr_bytes);
             }
-            printf("\tbefore refill\n");
             err = slot_prealloc_refill(aos_mm.slot_alloc_inst);
             if (err_is_fail(err) && err_no(err) != MM_ERR_SLOT_MM_ALLOC) {
                 DEBUG_ERR(err, "in slot_prealloc_refill() while initialising"
                         " memory allocator");
                 abort();
             }
-            printf("\tafter refill\n");
             mem_cap.slot++;
         }
     }
@@ -106,17 +100,16 @@ errval_t initialize_ram_alloc(void)
 
     int i;
 
-        mm_print(&aos_mm);
+    // for (i=0; i < 50; i++) {
+    //     struct capref cr;
+    //     mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
+    //     if (i%50 == 0) {
+    //         printf("Allocated %i chunck of size %u\n", i, BASE_PAGE_SIZE);
+    //     }
+    // }
 
-    for (i=0; i < 50; i++) {
-        struct capref cr;
-        mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
-        if (i%50 == 0) {
-            printf("Allocated %i chunck of size %u\n", i, BASE_PAGE_SIZE);
-        }
-    }
-
-    for (i=0; i < 1500; i++) {
+// //713,457
+    for (i=0; i < 30000; i++) {
         struct capref cr;
         mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
         
@@ -130,12 +123,25 @@ errval_t initialize_ram_alloc(void)
             printf("Allocated %i chunck of size %u\n", i, BASE_PAGE_SIZE);
         }
     }
-    // mm_print(&aos_mm);
-    // printf("AFTER\n");
-
-    // struct capref cr;
-    // mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
     mm_print(&aos_mm);
+    printf("AFTER\n");
+
+     struct capref cr;
+        mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
+            // mm_print(&aos_mm);
+
+        struct frame_identity fi;
+        err = frame_identify(cr, &fi);
+        
+        mm_free(&aos_mm, cr, fi.base, BASE_PAGE_SIZE * 500 );
+    // mm_print(&aos_mm);
+    //     mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
+    //         mm_print(&aos_mm);
+
+    //     err = frame_identify(cr, &fi);
+        
+    //     mm_free(&aos_mm, cr, fi.base, BASE_PAGE_SIZE * 500 );
+    // mm_print(&aos_mm);
 
 
 

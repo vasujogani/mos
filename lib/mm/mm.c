@@ -147,6 +147,15 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
  */
 errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct capref *retcap)
 {
+	struct slot_prealloc *sp = (struct slot_prealloc*) mm->slot_alloc_inst;
+	if (sp->meta[0].free < 3 && sp->meta[1].free < 3 && !sp->refilling) {
+		printf("refilling\n");
+		sp->refilling = true;
+		errval_t err = mm->slot_refill(mm->slot_alloc_inst);
+		sp->refilling = false;
+		assert(err_is_ok(err));
+
+	}
 	if (alignment < BASE_PAGE_SIZE) {
 		alignment = BASE_PAGE_SIZE;
 	}
@@ -174,24 +183,22 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
 				if (curr == mm->head) {
 					mm->head = new_node;
 				}
-						
-				struct slot_prealloc *sp = (struct slot_prealloc*) mm->slot_alloc_inst;
-				if (sp->meta[0].free < 3 && sp->meta[1].free < 3 && !sp->refilling) {
-					sp->refilling = true;
-					errval_t err = mm->slot_refill(mm->slot_alloc_inst);
-					sp->refilling = false;
-					assert(err_is_ok(err));
 
-				}
 
 				errval_t err = mm->slot_alloc(mm->slot_alloc_inst, 1, &(new_node->cap.cap));
 				assert(err_is_ok(err));
 
-				err = cap_retype(new_node->cap.cap, mm->initial_cap, curr->base - mm->initial_base, mm->objtype, size, 1);
+
+				err = cap_retype(new_node->cap.cap, mm->initial_cap, curr->base - mm->initial_base , mm->objtype, size, 1);
 				assert(err_is_ok(err));
+				// if (err_is_fail(err)) {
+				// 	mm_print(mm);
+				// 	assert(err_is_ok(err));
+				// }
 
 				new_node->base = curr->base;
 				new_node->size = size;
+
 				curr->base += size;
 				curr->size = remaining;
 
