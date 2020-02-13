@@ -10,6 +10,10 @@
 /// MM allocator instance data
 struct mm aos_mm;
 
+void test1(void);
+void test2(void);
+void test3(void);
+
 static errval_t aos_ram_alloc_aligned(struct capref *ret, size_t size, size_t alignment)
 {
     return mm_alloc_aligned(&aos_mm, size, alignment, ret);
@@ -98,7 +102,15 @@ errval_t initialize_ram_alloc(void)
         return err_push(err, LIB_ERR_RAM_ALLOC_SET);
     }
 
-    // // test1 large alloc
+    test1();
+    // test2();
+    // test3();
+
+    return SYS_ERR_OK;
+}
+
+void test1(void) {
+    // test1 large alloc
     int i;
     for (i=0; i < 3000; i++) {
         struct capref cr;
@@ -107,73 +119,77 @@ errval_t initialize_ram_alloc(void)
             printf("Allocated %i chunck of size %u\n", i, BASE_PAGE_SIZE);
         }
     }
+}
 
-    // // test2 alloc + free
-    // int i;
-    // for (i=0; i < 300000; i++) {
-    //     struct capref cr;
-    //     err = mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
-    //     assert(err_is_ok(err));
+void test2(void) {
+    // test2 alloc + free
+    errval_t err;
+    int i;
+    for (i=0; i < 300000; i++) {
+        struct capref cr;
+        err = mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
+        assert(err_is_ok(err));
 
-    //     struct frame_identity f;
-    //     err = frame_identify(cr, &f);
-    //     assert(err_is_ok(err));
+        struct frame_identity f;
+        err = frame_identify(cr, &f);
+        assert(err_is_ok(err));
 
-    //     err = mm_free(&aos_mm, cr, f.base, f.bytes);
-    //     assert(err_is_ok(err));
-    // }
+        err = mm_free(&aos_mm, cr, f.base, f.bytes);
+        assert(err_is_ok(err));
+    }
+}
 
-    // // test3 free coalesce
-    // //allocate 4
-    // struct capref retcap1;
-    // err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap1);
-    // assert(err_is_ok(err));
+void test3(void) {
+    // test3 free coalesce
+    //allocate 4
+    errval_t err;
+    struct capref retcap1;
+    err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap1);
+    assert(err_is_ok(err));
 
-    // struct capref retcap2;
-    // err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap2);
-    // assert(err_is_ok(err));
+    struct capref retcap2;
+    err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap2);
+    assert(err_is_ok(err));
 
-    // struct capref retcap3;
-    // err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap3);
-    // assert(err_is_ok(err));
+    struct capref retcap3;
+    err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap3);
+    assert(err_is_ok(err));
 
-    // struct capref retcap4;
-    // err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap4);
-    // assert(err_is_ok(err));
+    struct capref retcap4;
+    err = mm_alloc(&aos_mm, BASE_PAGE_SIZE, &retcap4);
+    assert(err_is_ok(err));
 
-    // mm_print(&aos_mm);
+    mm_print(&aos_mm);
 
-    // //free middle 2
-    // struct frame_identity f2;
-    // err = frame_identify(retcap2, &f2);
-    // assert(err_is_ok(err));
-    // err = mm_free(&aos_mm, retcap2, f2.base, f2.bytes);
-    // assert(err_is_ok(err));
+    //free middle 2
+    struct frame_identity f2;
+    err = frame_identify(retcap2, &f2);
+    assert(err_is_ok(err));
+    err = mm_free(&aos_mm, retcap2, f2.base, f2.bytes);
+    assert(err_is_ok(err));
 
-    // struct frame_identity f3;
-    // err = frame_identify(retcap3, &f3);
-    // assert(err_is_ok(err));
-    // err = mm_free(&aos_mm, retcap3, f3.base, f3.bytes);
-    // assert(err_is_ok(err));
+    struct frame_identity f3;
+    err = frame_identify(retcap3, &f3);
+    assert(err_is_ok(err));
+    err = mm_free(&aos_mm, retcap3, f3.base, f3.bytes);
+    assert(err_is_ok(err));
 
-    // mm_print(&aos_mm);
+    mm_print(&aos_mm);
 
-    // //allocate a big one
-    // struct capref retcap5;
-    // err = mm_alloc(&aos_mm, BASE_PAGE_SIZE * 2, &retcap5);
-    // assert(err_is_ok(err));
+    //allocate a big one
+    struct capref retcap5;
+    err = mm_alloc(&aos_mm, BASE_PAGE_SIZE * 2, &retcap5);
+    assert(err_is_ok(err));
 
-    // mm_print(&aos_mm);
+    mm_print(&aos_mm);
 
-    // struct frame_identity f1;
-    // err = frame_identify(retcap1, &f1);
-    // assert(err_is_ok(err));
+    struct frame_identity f1;
+    err = frame_identify(retcap1, &f1);
+    assert(err_is_ok(err));
 
-    // struct frame_identity f5;
-    // err = frame_identify(retcap5, &f5);
-    // assert(err_is_ok(err));
+    struct frame_identity f5;
+    err = frame_identify(retcap5, &f5);
+    assert(err_is_ok(err));
 
-    // assert(f1.base + f1.bytes == f5.base);    
-
-    return SYS_ERR_OK;
+    assert(f1.base + f1.bytes == f5.base);    
 }
