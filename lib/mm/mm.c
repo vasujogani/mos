@@ -266,7 +266,7 @@ void mm_print(struct mm *mm) {
 	while (n) {
 		struct frame_identity f;
 		frame_identify(n->cap.cap, &f);
-		printf("    MMNNODE %d: start: %zx, size: %"PRIu64" KB - Cap: base: %zx size: %"PRIu64" KB - ", idx, n->base, n->size / 1024 , f.base, f.bytes / 1024);
+		printf("    MMNNODE meta %d: base: %zx, size: %"PRIu64" KB - Cap: base: %zx size: %"PRIu64" KB - ", idx, n->base, n->size / 1024 , f.base, f.bytes / 1024);
 		if (n->type == NodeType_Free) {
 			printf("== Free\n");
 		} else {

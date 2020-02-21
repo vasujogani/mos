@@ -100,9 +100,9 @@ errval_t initialize_ram_alloc(void)
         return err_push(err, LIB_ERR_RAM_ALLOC_SET);
     }
 
-    test1();
+    // test1();
     // test2();
-    // test3();
+    test3();
 
     return SYS_ERR_OK;
 }
@@ -120,10 +120,10 @@ void test1(void) {
 
 void test2(void) {
     // test2 alloc + free
-    debug_printf("****Start Test 2 ====== allocating and freeing 300,000 times\n");
+    debug_printf("****Start Test 2 ====== allocating and freeing 50,000 times\n");
     errval_t err;
     int i;
-    for (i=0; i < 300000; i++) {
+    for (i=0; i < 50000; i++) {
         struct capref cr;
         err = mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
         assert(err_is_ok(err));
