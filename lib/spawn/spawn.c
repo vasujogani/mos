@@ -20,6 +20,10 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
     memset(si, 0, sizeof(*si));
     si->binary_name = binary_name;
 
+    // find the memory region of the module the binary belongs to
+    struct mem_region *mem_region = multiboot_find_module(bi, (const char *)binary_name);
+
+
     // TODO: Implement me
     // - Get the binary from multiboot image
     // - Map multiboot module in your address space
