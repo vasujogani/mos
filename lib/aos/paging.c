@@ -57,6 +57,14 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
     for ( int i = 0; i < ARM_L1_MAX_ENTRIES; i++ ) {
         st->l2_pts[i].initialized = false;
     }
+    /*
+    VASU
+    // initialze v_space_list
+    // need slab alloc to create enough space for this node or not keep a pointer in the first place
+    st->v_space_list.base = start_vaddr;
+    st->v_space_list.size = size;
+    st->v_space_list.v_region_nodetype = NodeType_Free;
+    */
     return SYS_ERR_OK;
 }
 
@@ -162,6 +170,18 @@ errval_t paging_region_unmap(struct paging_region *pr, lvaddr_t base, size_t byt
  */
 errval_t paging_alloc(struct paging_state *st, void **buf, size_t bytes)
 {
+    /*
+    VASU
+    while(st->v_space_list nodes) {
+        if (node->size > bytes) {
+            *buf = (void*)node->base;
+            node->base += bytes + bytes % BASE_PAGE_SIZE;
+            node->size -= (bytes + (bytes % BASE_PAGE_SIZE));
+            return OK;
+        }
+        node = node->next;
+    }
+    */
     *buf = NULL;
     return SYS_ERR_OK;
 }
