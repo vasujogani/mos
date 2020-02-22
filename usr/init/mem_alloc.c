@@ -13,6 +13,7 @@ struct mm aos_mm;
 void test1(void);
 void test2(void);
 void test3(void);
+void test4(void);
 
 static errval_t aos_ram_alloc_aligned(struct capref *ret, size_t size, size_t alignment)
 {
@@ -103,6 +104,7 @@ errval_t initialize_ram_alloc(void)
     // test1();
     // test2();
     test3();
+    // test4();
 
     return SYS_ERR_OK;
 }
@@ -110,11 +112,14 @@ errval_t initialize_ram_alloc(void)
 void test1(void) {
     // test1 large alloc
     debug_printf("****Start Test 1 ====== allocating 3000 times\n");
+    errval_t err;
     int i;
     for (i=0; i < 3000; i++) {
+        printf("On iteration %i\n", i);
         struct capref cr;
-        mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
+        err = mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
     }
+    mm_print(&aos_mm);
     debug_printf("****Done with Test 1\n");
 }
 
@@ -124,8 +129,9 @@ void test2(void) {
     errval_t err;
     int i;
     for (i=0; i < 50000; i++) {
+        printf("On iteration %i\n", i);
         struct capref cr;
-        err = mm_alloc(&aos_mm, BASE_PAGE_SIZE * 500, &cr);
+        err = mm_alloc_aligned(&aos_mm, BASE_PAGE_SIZE, BASE_PAGE_SIZE * 16, &cr);
         assert(err_is_ok(err));
 
         struct frame_identity f;
@@ -135,7 +141,37 @@ void test2(void) {
         err = mm_free(&aos_mm, cr, f.base, f.bytes);
         assert(err_is_ok(err));
     }
+    mm_print(&aos_mm);
     debug_printf("****Done with Test 2\n");
+}
+
+void test4(void) {
+    // test4 alloc + free
+    debug_printf("****Start Test 4 ====== allocating 5 times\n");
+    errval_t err;
+    int i;
+    mm_print(&aos_mm);
+    for (i=0; i < 5; i++) {
+        printf("On iteration %i\n", i);
+        struct capref cr;
+        if (i % 2 == 0) {
+            err = mm_alloc_aligned(&aos_mm, BASE_PAGE_SIZE, BASE_PAGE_SIZE * 16, &cr);
+            assert(err_is_ok(err));
+        } else {
+            err = mm_alloc_aligned(&aos_mm, BASE_PAGE_SIZE, BASE_PAGE_SIZE, &cr);
+            assert(err_is_ok(err));
+        }
+
+        mm_print(&aos_mm);
+
+        // struct frame_identity f;
+        // err = frame_identify(cr, &f);
+        // assert(err_is_ok(err));
+
+        // err = mm_free(&aos_mm, cr, f.base, f.bytes);
+        // assert(err_is_ok(err));
+    }
+    debug_printf("****Done with Test 4\n");
 }
 
 void test3(void) {

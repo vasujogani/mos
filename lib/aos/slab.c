@@ -176,7 +176,7 @@ static errval_t slab_refill_pages(struct slab_allocator *slabs, size_t bytes)
     }
     
     slab_grow(slabs, (void *)(faddr), bytes);
-    faddr +=  sizeof(struct mmnode)*64;
+    faddr +=  fsize;
 
     return SYS_ERR_OK;
 }

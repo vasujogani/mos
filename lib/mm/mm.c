@@ -102,6 +102,7 @@ errval_t mm_add(struct mm *mm, struct capref cap, genpaddr_t base, size_t size)
 	mm->initial_base = base;
 	mm->initial_cap = cap;
 
+
 	err = mm->slot_alloc(mm->slot_alloc_inst, 1, &(node->cap.cap));
 	if (err_is_fail(err)) {
         return err;
@@ -133,18 +134,19 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
 		assert(err_is_ok(err));
 
 	}
-	if (alignment < BASE_PAGE_SIZE) {
-		alignment = BASE_PAGE_SIZE;
-	}
-	if (size % alignment != 0) {
-		size += alignment - (size % alignment);
+
+	// round the size to the nearest page size multiple
+	if (size % BASE_PAGE_SIZE != 0) {
+		size += BASE_PAGE_SIZE - (size % BASE_PAGE_SIZE);
 	}
 
 	struct mmnode *curr = mm->head;
 	while(curr) {
 		if (curr->type == NodeType_Free) {
-			if (curr->size >= size) {
-				size_t remaining = curr->size - size;
+			// offset into curr node to actually start at because of alignment
+			size_t curr_offset = curr->base % alignment == 0 ? 0 : alignment - (curr->base % alignment);
+			if (curr_offset + size <= curr->size) {
+				size_t remaining = curr->size - size - curr_offset;
 				errval_t err;
 				if (slab_freecount(&mm->slabs) < 4 && ! mm->refillingslabs) {
 					mm->refillingslabs = true;
@@ -171,23 +173,48 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment, struct c
 					mm->head = new_node;
 				}
 
-
 				err = mm->slot_alloc(mm->slot_alloc_inst, 1, &(new_node->cap.cap));
 				if (err_is_fail(err)) {
 			        return err;
 			    }
-
-				err = cap_retype(new_node->cap.cap, mm->initial_cap, curr->base - mm->initial_base , mm->objtype, size, 1);
+				err = cap_retype(new_node->cap.cap, mm->initial_cap, (curr->base - mm->initial_base) + curr_offset, mm->objtype, size, 1);
 				if (err_is_fail(err)) {
 			        return err;
 			    }
 
-				new_node->base = curr->base;
+				new_node->base = curr->base + curr_offset;
 				new_node->size = size;
-
-				curr->base += size;
+				curr->base += size + curr_offset;
 				curr->size = remaining;
+				
+				// remove curr if its size is 0
+				if (curr->size == 0) {
+					curr->prev->next = curr->next;
+					curr->next->prev = curr->prev;
+					slab_free(&mm->slabs, curr);
+				}
+				// add pre-offset node if curr_offset does not equal 0
+				if (curr_offset > 0) {
+					struct mmnode *offset_node = (struct mmnode*) slab_alloc(&mm->slabs);
 
+					assert(offset_node != NULL);
+					offset_node->type = NodeType_Free;
+
+					offset_node->prev = new_node->prev;
+					if (new_node->prev != NULL) {
+						new_node->prev->next = offset_node;
+					}
+					offset_node->next = new_node;
+					new_node->prev = offset_node;
+				
+					if (new_node == mm->head) {
+						mm->head = offset_node;
+					}
+					
+					offset_node->base = new_node->base - curr_offset;
+					offset_node->size = curr_offset;
+				}
+				
 				*retcap = new_node->cap.cap;
 				break;
 			}
@@ -264,12 +291,13 @@ void mm_print(struct mm *mm) {
 	int idx = 0;
 
 	while (n) {
-		struct frame_identity f;
-		frame_identify(n->cap.cap, &f);
-		printf("    MMNNODE meta %d: base: %zx, size: %"PRIu64" KB - Cap: base: %zx size: %"PRIu64" KB - ", idx, n->base, n->size / 1024 , f.base, f.bytes / 1024);
 		if (n->type == NodeType_Free) {
+			printf("    MMNNODE meta %d: base: %zx, size: %"PRIu64" KB - ", idx, n->base, n->size / 1024);
 			printf("== Free\n");
 		} else {
+			struct frame_identity f;
+			frame_identify(n->cap.cap, &f);
+			printf("    MMNNODE meta %d: base: %zx, size: %"PRIu64" KB - Cap: base: %zx size: %"PRIu64" KB - ", idx, n->base, n->size / 1024 , f.base, f.bytes / 1024);
 			printf("== Allocated \n");
 		}
 		n = n->next;
