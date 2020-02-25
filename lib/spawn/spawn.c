@@ -151,6 +151,5 @@ errval_t elf_alloc_func(void *state, genvaddr_t base, size_t size, uint32_t flag
     size_t returned_bytes;
     frame_alloc(&frame_ref, size, &returned_bytes);
     paging_map_fixed_attr(state->ps, base, frame_ref, size, flags);
-    paging_map_fixed_attr(get_current_paging_state(), base, frame_ref,f size, flags);
-    *ret = (void *)base;
+    paging_map_frame_attr(get_current_paging_state(), ret, size, frame_ref, flags, NULL, NULL);
 }
