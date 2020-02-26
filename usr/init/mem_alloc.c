@@ -14,6 +14,8 @@ void test1(void);
 void test2(void);
 void test3(void);
 void test4(void);
+void test5(void);
+
 
 static errval_t aos_ram_alloc_aligned(struct capref *ret, size_t size, size_t alignment)
 {
@@ -105,8 +107,9 @@ errval_t initialize_ram_alloc(void)
 
     // test1();
     // test2();
-    test3();
+    // test3();
     // test4();
+    test5();
 
     return SYS_ERR_OK;
 }
@@ -145,35 +148,6 @@ void test2(void) {
     }
     mm_print(&aos_mm);
     debug_printf("****Done with Test 2\n");
-}
-
-void test4(void) {
-    // test4 alloc + free
-    debug_printf("****Start Test 4 ====== allocating 5 times\n");
-    errval_t err;
-    int i;
-    mm_print(&aos_mm);
-    for (i=0; i < 5; i++) {
-        printf("On iteration %i\n", i);
-        struct capref cr;
-        if (i % 2 == 0) {
-            err = mm_alloc_aligned(&aos_mm, BASE_PAGE_SIZE, BASE_PAGE_SIZE * 16, &cr);
-            assert(err_is_ok(err));
-        } else {
-            err = mm_alloc_aligned(&aos_mm, BASE_PAGE_SIZE, BASE_PAGE_SIZE, &cr);
-            assert(err_is_ok(err));
-        }
-
-        mm_print(&aos_mm);
-
-        // struct frame_identity f;
-        // err = frame_identify(cr, &f);
-        // assert(err_is_ok(err));
-
-        // err = mm_free(&aos_mm, cr, f.base, f.bytes);
-        // assert(err_is_ok(err));
-    }
-    debug_printf("****Done with Test 4\n");
 }
 
 void test3(void) {
@@ -231,4 +205,52 @@ void test3(void) {
 
     assert(f1.base + f1.bytes == f5.base);    
     debug_printf("****Done with Test 3\n");
+}
+
+void test4(void) {
+    // test4 alloc + free
+    debug_printf("****Start Test 4 ====== allocating 5 times\n");
+    errval_t err;
+    int i;
+    mm_print(&aos_mm);
+    for (i=0; i < 5; i++) {
+        printf("On iteration %i\n", i);
+        struct capref cr;
+        if (i % 2 == 0) {
+            err = mm_alloc_aligned(&aos_mm, BASE_PAGE_SIZE, BASE_PAGE_SIZE * 16, &cr);
+            assert(err_is_ok(err));
+        } else {
+            err = mm_alloc_aligned(&aos_mm, BASE_PAGE_SIZE, BASE_PAGE_SIZE, &cr);
+            assert(err_is_ok(err));
+        }
+
+        mm_print(&aos_mm);
+
+        // struct frame_identity f;
+        // err = frame_identify(cr, &f);
+        // assert(err_is_ok(err));
+
+        // err = mm_free(&aos_mm, cr, f.base, f.bytes);
+        // assert(err_is_ok(err));
+    }
+    debug_printf("****Done with Test 4\n");
+}
+
+void test5(void) {
+    // test4 alloc + free
+    debug_printf("****Start Test 5 ====== larger frame allocation\n");
+    errval_t err;
+    void *buf;
+    struct capref frame_ref;
+    size_t returned_bytes;
+    err = frame_alloc(&frame_ref, BASE_PAGE_SIZE * 16, &returned_bytes);
+    err = paging_map_frame(get_current_paging_state(), (void *)&buf,
+                               returned_bytes, frame_ref,
+                                NULL, NULL);
+    char *start = (char *)buf;
+    for (int i = 0; i < BASE_PAGE_SIZE * 16; i++) {
+        *(start + i) = 'B';
+        printf("On iteration %i, value of address is %c\n", i, *(start + i));    
+    }
+    debug_printf("****Done with Test 5\n");
 }
