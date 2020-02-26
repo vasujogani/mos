@@ -65,6 +65,15 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
     st->v_space_list.size = size;
     st->v_space_list.v_region_nodetype = NodeType_Free;
     */
+    slab_init(&st->slabs, sizeof(struct v_region_metadata), slab_default_refill);
+    struct v_region_metadata *head = slab_alloc(st->slabs);
+    head->type = NodeType_Free;
+    head->base = start_vaddr;
+    // TODO (M2):
+    // get addresses from the lecture slides
+    // head->size = 0x - start_vaddr;
+    head->next = NULL;
+    st->v_space_list = head;
     return SYS_ERR_OK;
 }
 
@@ -90,6 +99,7 @@ errval_t paging_init(void)
     };
 
     struct slot_allocator *default_allocator = get_default_slot_allocator();
+    // TODO (M2): Set start_vaddr to the appropriate address
     paging_init_state(&current, 0, l1_pt, default_allocator); 
     return SYS_ERR_OK;
 }
@@ -176,19 +186,21 @@ errval_t paging_region_unmap(struct paging_region *pr, lvaddr_t base, size_t byt
  */
 errval_t paging_alloc(struct paging_state *st, void **buf, size_t bytes)
 {
-    /*
-    VASU
-    while(st->v_space_list nodes) {
-        if (node->size > bytes) {
-            *buf = (void*)node->base;
-            node->base += bytes + bytes % BASE_PAGE_SIZE;
-            node->size -= (bytes + (bytes % BASE_PAGE_SIZE));
-            return OK;
+    struct v_region_metadata *node = st->v_space_list; 
+    while (node) {
+        if (node->type == NodeType_Free && node->size >= bytes) {
+            *buf = (void*) node->base;
+            // TODO(M2): Should rounding be moved outside of the loop?
+            node->base += bytes + (BASE_PAGE_SIZE - bytes % BASE_PAGE_SIZE);
+            node->size -= (bytes + (BASE_PAGE_SIZE - bytes % BASE_PAGE_SIZE));
+            return SYS_ERR_OK;
         }
         node = node->next;
     }
-    */
     *buf = NULL;
+    // TODO(M2): Is this correct? Or should we return something indicating an error - no more
+    // free space in the virtual address space?
+    // probably should be an error - but which macro?
     return SYS_ERR_OK;
 }
 
@@ -218,10 +230,13 @@ slab_refill_no_pagefault(struct slab_allocator *slabs, struct capref frame, size
  * \brief map a user provided frame at user provided VA.
  * TODO(M1): Map a frame assuming all mappings will fit into one L2 pt
  * TODO(M2): General case 
+ * TODO(M2): Handle keeping track of the mapping - create a node to indicate it's been allocated
  */
 errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
         struct capref frame, size_t bytes, int flags)
 {
+    // TODO(M2): Should we get rid of this? probably won't do anything - will already be aligned
+    // if they went through paging_alloc. Don't go through - their problem. 
     // align the vaddr
     if (vaddr % BASE_PAGE_SIZE != 0) {
         vaddr -= vaddr % BASE_PAGE_SIZE;
@@ -239,6 +254,39 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
     int pte_count = bytes / BASE_PAGE_SIZE;
     int remaining_ptes, frame_offset;
     frame_offset = 0;
+
+    // TODO(M2): Create a node to keep track of allocated space
+    // Should this be here, or in paging_alloc?
+    struct v_region_metadata *allocated = slab_alloc(st->slabs);
+    allocated->type = NodeType_Allocated;
+    allocated->base = vaddr;
+    allocated->size = bytes;
+    // insert in the list st keeps track of
+    // TODO(M2): Verify that this is correct
+
+    // Use 1 list - make coalescing easier 
+    struct v_region_metadata *current = st->v_space_list;
+    while (current->next && current->base < vaddr) {
+        current = current->next;
+    }
+    allocated->next = current->next;
+    current->next = allocated;
+  
+    /* 
+    // or use 2 lists - fewer checks when allocating 
+    if (st->allocated_list) {
+        // insert, sorted by address
+        struct v_region_metadata *current = st->allocated_list;
+        while (current->next && current->base < vaddr) {
+            current = current->next;
+        }
+        allocated->next = current->next;
+        current->next = allocated;
+    }
+    else {
+        st->allocated_list = allocated;
+    }
+    */
 
     while ( pte_count > 0 )
     {
