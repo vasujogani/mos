@@ -71,7 +71,7 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
     head->base = start_vaddr;
     // TODO (M2):
     // get addresses from the lecture slides
-    // head->size = 0x - start_vaddr;
+    // head->size = max_vaddr - start_vaddr;
     head->next = NULL;
     st->v_space_list = head;
     return SYS_ERR_OK;
