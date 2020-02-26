@@ -22,11 +22,12 @@ struct spawninfo {
 
     // Information about the binary
     char * binary_name;     // Name of the binary
-    struct capref *l1_cnode; // pointer to process L1 CNODE
-    struct capref *l1_pagetable;
+    struct capref l1_cnode; // pointer to process L1 CNODE
+    struct capref l1_pagetable;
     struct paging_state ps;
     struct cnoderef l2_cnodes[ROOTCN_FREE_SLOTS]; // array
     genvaddr_t entry_addr; 
+    genvaddr_t got;
     // TODO: Use this structure to keep track
     // of information you need for building/starting
     // your new process!

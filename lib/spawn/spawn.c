@@ -24,7 +24,7 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
     // - Get the binary from multiboot image
     struct mem_region *mem_region = multiboot_find_module(bi, (const char *)binary_name);
 
-    struct capref child_frame = {
+    struct capref child_frame_cap = {
         .cnode = cnode_module,
         .slot = mem_region−>mrmod_slot,
     };
@@ -33,36 +33,40 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
     // vaddr will be return address, vsize return size
 
     // wiill be used for verification later
-    char *binary_start = (char *)mem_region->mr_base;
-    assert(*binary_start == 0x7f);
-    assert(*(binary_start + 1) == 'E');
-    assert(*(binary_start + 2) == 'L');
-    assert(*(binary_start + 3) == 'F');
+//    char *binary_start = (char *)mem_region->mr_base;
+//    assert(*binary_start == 0x7f);
+//    assert(*(binary_start + 1) == 'E');
+//    assert(*(binary_start + 2) == 'L');
+//    assert(*(binary_start + 3) == 'F');
+//
 
+    struct frame_identity frame;
+    frame_identify(frame, child_frame_cap);
 
+    lvaddr_t elf_addr;
+    paging_map_frame(get_current_paging_state(), (void *)&elf_addr, frame.bytes, child_frame_cap, NULL, NULL);
     // - Setup childs cspace
-    struct capref l1_cnode;
-    err = cnode_create_l1(&l1_cnode, NULL);
+    struct cnoderef l1_cnode_ref;
+    err = cnode_create_l1(&si->l1_cnode, l1_cnode_ref);
     if (err_is_fail(err)) {
         debug_printf("Unable to create initial L1 CNode\n");
         return err_push(err, LIB_ERR_CNODE_CREATE);
     }
-    si->l1_cnode = &l1_cnode;
 
     for (int i = 0; i < ROOTCN_FREE_SLOT; i++) {
-        struct cnoderef cnode_ref;
-        err = cnode_create_foreign_l2(l1_cnode, i, cnode_ref);
+        err = cnode_create_foreign_l2(si->l1_cnode, i, si->l2_cnodes[i]);
         if (err_is_fail(err)) {
             debug_printf("Unable to create L2 CNode\n");
             return err_push(err, LIB_ERR_CNODE_CREATE);
         }
-        si->l2_cnodes[i] = cnode_ref;
     } 
 
     
     // copy L1 root capability
+    struct capref curr_ref;
     curr_ref.slot = TASKCN_SLOT_ROOTCN;
-    err = cap_copy(curr_ref, l1_cnode);
+    curr_ref.cnode = si->l2_cnodes[ROOTCN_SLOT_TASKCN];
+    err = cap_copy(curr_ref, si->l1_cnode);
     if (err_is_fail(err)) {
         return err_push(err, LIB_ERR_CNODE_CREATE_FROM_MEM);
     }
@@ -73,15 +77,15 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
 
 
 
-    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_SLOT_ALLOC0, NULL);
-    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_SLOT_ALLOC1, NULL);
-    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_SLOT_ALLOC2, NULL);
+//    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_SLOT_ALLOC0, NULL);
+//    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_SLOT_ALLOC1, NULL);
+//    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_SLOT_ALLOC2, NULL);
 
     //allocate memory for process
-    struct cnoderef base_page_cn_ref;
-    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_BASE_PAGE_CN, base_page_cn_ref);
+//    struct cnoderef base_page_cn_ref;
+//    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_BASE_PAGE_CN, base_page_cn_ref);
     struct capref ram_ref = {
-            .cnode = base_page_cn_ref,
+            .cnode = si->l2_cnodes[ROOTCN_SLOT_BASE_PAGE_CN],
             .slot = 0,
     };
     for (int i=0; i<L2_CNODE_SLOTS; i++) {
@@ -98,16 +102,43 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
         cap_destroy(temp_cap);
     }
     
-    struct cnoderef page_table_cn_ref;
-    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_PAGECN, page_table_cn_ref);
-    struct capref l1_ref = {
-        .cnode = page_table_cn_ref,
-        .slot = 0,
-    };
-    err = vnode_create(l1_ref, s ObjType_VNode_ARM_l1);
-    err = paging_init_state(&ps, 0, l1_ref, get_default_slot_allocator());
+    // vspace
+//    struct cnoderef page_table_cn_ref;
+//    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_PAGECN, page_table_cn_ref);
+//  create a new l1 pt in the current vspace and copy it to the child's since child does not have vspace for pt
+    
+    si->l1_pagetable.cnode = si->l2_cnodes[ROOTCN_SLOT_PAGECN];
+    si->l1_pagetable.slot = PAGECN_SLOT_VROOT;
 
-    err = elf_load(EM_ARM, elf_alloc_func, (void *)si, vaddr, vsize, &(si->entry_addr));
+    struct capref l1_pt_parent;
+    slot_alloc(&l1_pt_parent);
+    vnode_create(l1_pt_parent, ObjType_VNode_ARM_l1);
+    
+    err = cap_copy(si->l1_pagetable, l1_pt_parent);
+    if (err_is_fail(err)) {
+	    // Error
+	    //
+    }
+
+//    struct capref l1_ref = {
+//        .cnode = page_table_cn_ref,
+//        .slot = 0,
+//    };
+//    err = vnode_create(l1_ref, s ObjType_VNode_ARM_l1);
+    err = paging_init_state(&si->ps, 0, l1_pt_parent, get_default_slot_allocator());
+
+    // load elf
+    err = elf_load(EM_ARM, elf_alloc_func, (void *)si, elf_addr, frame.bytes, &(si->entry_addr));
+    
+    struct Elf32_Shdr *got = elf32_find_section_header_name(elf_addr, frame.bytes, ".got");
+    si->got = got;
+
+    // init dispatcher
+    //
+
+    // setup env
+    //
+    // invoke_dispatcher()
 
 
 
