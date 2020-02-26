@@ -28,6 +28,9 @@ struct spawninfo {
     struct cnoderef l2_cnodes[ROOTCN_FREE_SLOTS]; // array
     genvaddr_t entry_addr; 
     genvaddr_t got;
+    struct capref dispatcher;
+    arch_registers_state_t *enabled_area;
+
     // TODO: Use this structure to keep track
     // of information you need for building/starting
     // your new process!

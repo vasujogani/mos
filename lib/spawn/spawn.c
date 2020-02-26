@@ -136,6 +136,69 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
     // init dispatcher
     //
 
+    struct capref endpoint;
+    err = slot_alloc(&si->dispatcher);
+    // check if err fail
+    dispatcher_create(&si->dispatcher);
+    cap_retype(endpoint, &si->dispatcher, 0, ObjType_EndPoint, 0, 1);
+
+    size_t allocted_amount;
+    struct capref dispatcher_frame;
+    err = frame_alloc(&si->dispatcher_frame, DISPATCHER_SIZE, &allocated_amount);
+    // check if err fail
+
+    struct capref dispatcher_cnode;
+    dispatcher_cnode.cnode = si->l2_cnodes[ROOTCN_SLOT_TASK];
+    dispatcher_cnode.slot = TASKCN_SLOT_SELFEP;
+
+    cap_copy(dispatcher_cnode, si->dispatcher);
+    
+    dispatcher_cnode.cnode = si->l2_cnode_list[ROOTCN_SLOT_TASKCN];
+    dispatcher_cnode.slot = TASKCN_SLOT_SELFEP;
+
+    cap_copy(dispatcher_cnode, endpoint);
+
+    dispatcher_cnode.cnode = si->l2_cnodes[ROOTCN_SLOT_TASKCN];
+    dispatcher_cnode.slot = TASKCN_SLOT_DISPFRAME;
+
+    cap_copy(dispatcher_cnode, dispatcher_frame);
+
+    err = paging_map_frame(&si->ps, (void *)child_vaddr, DISPATCHER_SIZE, dispatcher_frame, NULL, NULL);
+    // check if err  
+
+    err = pagin_map_frame(get_current_paging_state(), (void *) parent_vaddr, DISPATCHER_SIZE, dispatcher_frame, NULL, NULL);
+   
+    // check if err
+    struct dispatcher_shared_generic *disp = get_dispatcher_shared_generic((dispatcher_handle_t) parent_vaddr);
+    struct dispatcher_generic *disp_gen = get_dispatcher_generic((dispatcher_handle_t) parent_vaddr);
+    struct dispatcher_shared_arm *disp_arm = get_dispatcher_shared_arm((dispatcher_handle_t) parent_vaddr);
+    arch_registers_state_t *enabled_area = dispatcher_get_enabled_save_area((dispatcher_handle_t) parent_vaddr);
+
+    arch_registers_state_t *disabled_area = dispatcher_get_disabled_save_area((dispatcher_handle_t) parent_vaddr);
+
+    disp->udisp = child_vaddr;
+    disp->disabled = 1;
+    disp->fpu_trap = 1;
+    
+    disp_gen->core_id = 0;
+    disp_gen->eh_frame = 0;	
+    disp_gen->eh_frame_size = 0;
+    disp_gen->eh_frame_hdr = 0;	
+    disp_gen->eh_frame_hdr_size = 0;
+    
+    strncpy(disp->name, si->binary_name, DISP_NAME_LEN);
+
+    disp_arm->got_base = si->got;
+    enabled_area->regs[REG_OFFSET(PIC_REGISTER)] = si->got;
+    disabled_area->regs[REG_OFFSET(PIC_REGISTER)] = si->got;
+    
+    enabled_area->named.cpsr = CPSR_F_MASK | ARM_MODE_USR;
+    disabled_area->named.cpsr = CPSR_F_MASK | ARM_MODE_USR;
+
+    si->enabled_area = enabled_area;
+
+    // dispatcher done
+
     // setup env
     //
     // invoke_dispatcher()
