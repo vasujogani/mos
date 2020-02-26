@@ -27,7 +27,7 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
     si->binary_name = binary_name;
     printf("CC\n");
     // - Get the binary from multiboot image
-
+    struct mem_region *mem_region = multiboot_find_module(bi, (const char *)binary_name);
     printf("A\n");
     struct capref child_frame_cap = {
         .cnode = cnode_module,
