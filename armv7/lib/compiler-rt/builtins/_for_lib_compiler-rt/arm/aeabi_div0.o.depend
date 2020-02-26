@@ -1,0 +1,3 @@
+armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o \
+ armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o.depend: \
+ /u/rv22698/Documents/Multicore/p2_code/lib/compiler-rt/builtins/arm/aeabi_div0.c

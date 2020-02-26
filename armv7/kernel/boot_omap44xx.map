@@ -1,0 +1,624 @@
+Archive member included to satisfy reference by file (symbol)
+
+./armv7/lib/getopt/_for_lib_getopt/getopt.o
+                              ./armv7/kernel/arch/armv7/boot_driver.o (parse_commandline)
+./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uldivmod.o
+                              ./armv7/kernel/printf.o (__aeabi_uldivmod)
+./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+                              ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uldivmod.o (__udivmoddi4)
+./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+                              ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o (__aeabi_uidiv)
+./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uidivmod.o
+                              ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o (__aeabi_uidivmod)
+./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/udivmodsi4.o
+                              ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uidivmod.o (__udivmodsi4)
+./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+                              ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/udivmodsi4.o (__aeabi_idiv0)
+
+Allocating common symbols
+Common symbol       size              file
+
+core_data           0x4               ./armv7/kernel/arch/arm/multiboot.o
+my_core_id          0x1               ./armv7/kernel/arch/armv7/boot_driver.o
+boot_records        0x10              ./armv7/kernel/arch/armv7/boot_driver.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+LOAD ./armv7/kernel/arch/armv7/boot.o
+LOAD ./armv7/kernel/arch/armv7/boot_driver.o
+LOAD ./armv7/kernel/arch/armv7/paging_init.o
+LOAD ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+LOAD ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+LOAD ./armv7/kernel/arch/arm/kputchar.o
+LOAD ./armv7/kernel/arch/arm/misc.o
+LOAD ./armv7/kernel/arch/arm/multiboot.o
+LOAD ./armv7/kernel/arch/arm/omap_uart.o
+LOAD ./armv7/kernel/memset.o
+LOAD ./armv7/kernel/printf.o
+LOAD ./armv7/kernel/stdlib.o
+LOAD ./armv7/kernel/string.o
+LOAD ./armv7/lib/libgetopt.a
+LOAD ./armv7/lib/libmdb_kernel.a
+LOAD ./armv7/lib/libcompiler-rt.a
+                0x0000000000000000                . = 0x0
+                0x0000000000000000                . = ALIGN (0x1000)
+                0x0000000000000000                boot_start = .
+                0x0000000000000000                . = ALIGN (0x4000)
+
+.boot           0x0000000000000000     0xe9c0
+ *(.boot.tables)
+ .boot.tables   0x0000000000000000     0xc000 ./armv7/kernel/arch/armv7/paging_init.o
+                0x0000000000000000                l2_vec
+                0x0000000000004000                l1_high
+                0x0000000000008000                l1_low
+ *(.boot)
+ .boot          0x000000000000c000     0x29c0 ./armv7/kernel/arch/armv7/boot_driver.o
+                0x000000000000c000                boot_core_data
+                0x000000000000c128                bsp_kcb
+                0x000000000000e9c0                boot_text_start = .
+
+.text           0x000000000000e9c0     0x3908
+ *(.text)
+ .text          0x000000000000e9c0       0x50 ./armv7/kernel/arch/armv7/boot.o
+                0x000000000000e9c0                start
+ .text          0x000000000000ea10      0xaa0 ./armv7/kernel/arch/armv7/boot_driver.o
+                0x000000000000edc0                switch_and_jump
+                0x000000000000eec4                boot_app_core
+                0x000000000000efbc                boot_bsp_core
+ .text          0x000000000000f4b0      0x3ec ./armv7/kernel/arch/armv7/paging_init.o
+                0x000000000000f4b0                paging_mmu_enabled
+                0x000000000000f4b8                paging_init
+                0x000000000000f688                enable_mmu
+ .text          0x000000000000f89c       0x28 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+                0x000000000000f89c                plat_advance_aps
+ .text          0x000000000000f8c4        0x0 ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+ .text          0x000000000000f8c4      0x184 ./armv7/kernel/arch/arm/kputchar.o
+                0x000000000000f8c4                kprintf_begin
+                0x000000000000f90c                kputchar
+                0x000000000000f9b0                kprintf_end
+ .text          0x000000000000fa48      0x110 ./armv7/kernel/arch/arm/misc.o
+                0x000000000000fa48                panic
+                0x000000000000faa0                halt
+                0x000000000000faa8                printk
+                0x000000000000fb2c                __assert_func
+ .text          0x000000000000fb58      0x28c ./armv7/kernel/arch/arm/multiboot.o
+                0x000000000000fb58                multiboot_find_module
+                0x000000000000fcc8                multiboot_end_addr
+ .text          0x000000000000fde4      0x440 ./armv7/kernel/arch/arm/omap_uart.o
+                0x000000000000ffdc                serial_early_init
+                0x000000000001007c                omap_uart_init
+                0x0000000000010124                serial_putchar
+                0x00000000000101a0                serial_getchar
+ .text          0x0000000000010224       0xe4 ./armv7/kernel/memset.o
+                0x0000000000010224                memset
+ .text          0x0000000000010308     0x104c ./armv7/kernel/printf.o
+                0x00000000000111a4                putchar
+                0x00000000000111cc                printf_nolog
+                0x000000000001121c                printf
+                0x000000000001126c                vprintf
+                0x00000000000112b8                snprintf
+                0x0000000000011310                vsnprintf
+ .text          0x0000000000011354      0x19c ./armv7/kernel/stdlib.o
+                0x0000000000011354                strtol
+                0x0000000000011420                strtoul
+ .text          0x00000000000114f0      0x544 ./armv7/kernel/string.o
+                0x00000000000114f0                memchr
+                0x0000000000011534                strlen
+                0x000000000001155c                strncpy
+                0x0000000000011588                strcpy
+                0x00000000000115a0                memcpy
+                0x0000000000011620                strchr
+                0x0000000000011688                strrchr
+                0x0000000000011714                strncmp
+                0x0000000000011780                strcmp
+                0x000000000001184c                strstr
+                0x0000000000011898                strspn
+                0x0000000000011928                strcspn
+                0x00000000000119b0                strtok
+ .text          0x0000000000011a34      0x31c ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+                0x0000000000011a34                parse_commandline
+ .text          0x0000000000011d50       0x24 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uldivmod.o
+                0x0000000000011d50                __aeabi_uldivmod
+ .text          0x0000000000011d74      0x2b0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+                0x0000000000011d74                __udivmoddi4
+ .text          0x0000000000012024       0x88 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+                0x0000000000012024                __udivsi3
+                0x0000000000012024                __aeabi_uidiv
+ .text          0x00000000000120ac       0x1c ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uidivmod.o
+                0x00000000000120ac                __aeabi_uidivmod
+ .text          0x00000000000120c8      0x1e0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/udivmodsi4.o
+                0x00000000000120c8                __udivmodsi4
+ .text          0x00000000000122a8       0x20 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+                0x00000000000122a8                __aeabi_idiv0
+                0x00000000000122b8                __aeabi_ldiv0
+ *(.text.unlikely)
+
+.glue_7         0x00000000000122c8        0x0
+ .glue_7        0x00000000000122c8        0x0 linker stubs
+
+.glue_7t        0x00000000000122c8        0x0
+ .glue_7t       0x00000000000122c8        0x0 linker stubs
+
+.vfp11_veneer   0x00000000000122c8        0x0
+ .vfp11_veneer  0x00000000000122c8        0x0 linker stubs
+
+.v4_bx          0x00000000000122c8        0x0
+ .v4_bx         0x00000000000122c8        0x0 linker stubs
+
+.plt            0x00000000000122c8        0x0
+ .plt           0x00000000000122c8        0x0 ./armv7/kernel/arch/armv7/boot.o
+
+.iplt           0x00000000000122c8        0x0
+ .iplt          0x00000000000122c8        0x0 ./armv7/kernel/arch/armv7/boot.o
+
+.rodata         0x00000000000122c8      0xc80
+ *(.rodata)
+ .rodata        0x00000000000122c8       0x36 ./armv7/kernel/arch/armv7/boot_driver.o
+ *fill*         0x00000000000122fe        0x2 
+ .rodata        0x0000000000012300       0x1d ./armv7/kernel/arch/armv7/paging_init.o
+ *fill*         0x000000000001231d        0x3 
+ .rodata        0x0000000000012320       0x20 ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+                0x0000000000012320                uart_size
+                0x0000000000012330                uart_base
+ .rodata        0x0000000000012340       0x12 ./armv7/kernel/arch/arm/multiboot.o
+ *fill*         0x0000000000012352        0x2 
+ .rodata        0x0000000000012354       0x43 ./armv7/kernel/arch/arm/omap_uart.o
+ *fill*         0x0000000000012397        0x1 
+ .rodata        0x0000000000012398       0x25 ./armv7/kernel/printf.o
+ *fill*         0x00000000000123bd        0x3 
+ .rodata        0x00000000000123c0       0x10 ./armv7/kernel/stdlib.o
+ .rodata        0x00000000000123d0        0x7 ./armv7/kernel/string.o
+ *fill*         0x00000000000123d7        0x1 
+ .rodata        0x00000000000123d8       0x46 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ *(.rodata.*)
+ *fill*         0x000000000001241e        0x2 
+ .rodata.str1.4
+                0x0000000000012420      0x61c ./armv7/kernel/arch/armv7/boot_driver.o
+                                        0x62c (size before relaxing)
+ .rodata.str1.4
+                0x0000000000012a3c      0x251 ./armv7/kernel/arch/armv7/paging_init.o
+ *fill*         0x0000000000012c8d        0x3 
+ .rodata.str1.4
+                0x0000000000012c90       0x4e ./armv7/kernel/arch/arm/misc.o
+ .rodata.str1.4
+                0x0000000000012cde       0x7b ./armv7/kernel/arch/arm/multiboot.o
+ *fill*         0x0000000000012cde        0x2 
+ .rodata.str1.4
+                0x0000000000012ce0       0xaa ./armv7/kernel/arch/arm/omap_uart.o
+ *fill*         0x0000000000012d8a        0x2 
+ .rodata.str1.4
+                0x0000000000012d8c        0x7 ./armv7/kernel/printf.o
+ *fill*         0x0000000000012d93        0x1 
+ .rodata.str1.4
+                0x0000000000012d94       0x53 ./armv7/kernel/stdlib.o
+ *fill*         0x0000000000012de7        0x1 
+ .rodata.str1.4
+                0x0000000000012de8       0x9b ./armv7/kernel/string.o
+ *fill*         0x0000000000012e83        0x1 
+ .rodata.str1.4
+                0x0000000000012e84       0xc4 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+                                         0xc1 (size before relaxing)
+
+.gnu.version_d  0x0000000000012f48        0x0
+ .gnu.version_d
+                0x0000000000012f48        0x0 ./armv7/kernel/arch/armv7/boot.o
+
+.gnu.version    0x0000000000012f48        0x0
+ .gnu.version   0x0000000000012f48        0x0 ./armv7/kernel/arch/armv7/boot.o
+
+.gnu.version_r  0x0000000000012f48        0x0
+ .gnu.version_r
+                0x0000000000012f48        0x0 ./armv7/kernel/arch/armv7/boot.o
+
+.dynsym         0x0000000000012f48      0x4f0
+ .dynsym        0x0000000000012f48      0x4f0 ./armv7/kernel/arch/armv7/boot.o
+
+.dynstr         0x0000000000013438      0x35f
+ .dynstr        0x0000000000013438      0x35f ./armv7/kernel/arch/armv7/boot.o
+
+.gnu.hash       0x0000000000013798      0x288
+ .gnu.hash      0x0000000000013798      0x288 ./armv7/kernel/arch/armv7/boot.o
+
+.note.gnu.build-id
+                0x0000000000013a20       0x24
+ *(.note.gnu.build-id)
+ .note.gnu.build-id
+                0x0000000000013a20       0x24 linker stubs
+                0x0000000000013a44                boot_text_end = .
+
+.got            0x0000000000013a44      0x1b8
+                0x0000000000013a44                got_base = .
+ *(.got)
+ .got           0x0000000000013a44      0x1ac ./armv7/kernel/arch/armv7/boot.o
+ *(.got.plt)
+ .got.plt       0x0000000000013bf0        0xc ./armv7/kernel/arch/armv7/boot.o
+                0x0000000000013bf0                _GLOBAL_OFFSET_TABLE_
+
+.data           0x0000000000013bfc       0x44
+ *(.data)
+ .data          0x0000000000013bfc        0x0 ./armv7/kernel/arch/armv7/boot.o
+ .data          0x0000000000013bfc        0xc ./armv7/kernel/arch/armv7/boot_driver.o
+                0x0000000000013bfc                boot_arguments
+ .data          0x0000000000013c08        0x0 ./armv7/kernel/arch/armv7/paging_init.o
+ .data          0x0000000000013c08        0x0 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .data          0x0000000000013c08       0x10 ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+                0x0000000000013c08                serial_num_physical_ports
+                0x0000000000013c0c                serial_debug_port
+                0x0000000000013c10                serial_console_port
+                0x0000000000013c14                phys_memory_start
+ .data          0x0000000000013c18        0x0 ./armv7/kernel/arch/arm/kputchar.o
+ .data          0x0000000000013c18        0xc ./armv7/kernel/arch/arm/misc.o
+                0x0000000000013c18                kernel_loglevel
+                0x0000000000013c1c                kernel_ticks_enabled
+                0x0000000000013c20                kernel_log_subsystem_mask
+ .data          0x0000000000013c24        0x0 ./armv7/kernel/arch/arm/multiboot.o
+ .data          0x0000000000013c24        0x0 ./armv7/kernel/arch/arm/omap_uart.o
+ .data          0x0000000000013c24        0x0 ./armv7/kernel/memset.o
+ .data          0x0000000000013c24        0x0 ./armv7/kernel/printf.o
+ .data          0x0000000000013c24        0x0 ./armv7/kernel/stdlib.o
+ .data          0x0000000000013c24        0x0 ./armv7/kernel/string.o
+ .data          0x0000000000013c24        0x0 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .data          0x0000000000013c24        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uldivmod.o
+ .data          0x0000000000013c24        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+ .data          0x0000000000013c24        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+ .data          0x0000000000013c24        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uidivmod.o
+ .data          0x0000000000013c24        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/udivmodsi4.o
+ .data          0x0000000000013c24        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+ *(.data.*)
+ .data.rel.ro   0x0000000000013c24        0x0 ./armv7/kernel/arch/armv7/boot.o
+ .data.rel.local
+                0x0000000000013c24       0x1c ./armv7/kernel/arch/armv7/boot_driver.o
+                0x0000000000013c3c                global
+
+.igot.plt       0x0000000000013c40        0x0
+ .igot.plt      0x0000000000013c40        0x0 ./armv7/kernel/arch/armv7/boot.o
+
+.bss            0x0000000000013c40     0x4454
+ *(.bss)
+ *fill*         0x0000000000013c40       0xc0 
+ .bss           0x0000000000013d00     0x4000 ./armv7/kernel/arch/armv7/boot.o
+ .bss           0x0000000000017d00        0x0 ./armv7/kernel/arch/armv7/boot_driver.o
+ .bss           0x0000000000017d00        0x0 ./armv7/kernel/arch/armv7/paging_init.o
+ .bss           0x0000000000017d00        0x0 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .bss           0x0000000000017d00        0x0 ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+ .bss           0x0000000000017d00      0x104 ./armv7/kernel/arch/arm/kputchar.o
+ .bss           0x0000000000017e04      0x204 ./armv7/kernel/arch/arm/misc.o
+                0x0000000000018004                kernel_now
+ .bss           0x0000000000018008        0x0 ./armv7/kernel/arch/arm/multiboot.o
+ .bss           0x0000000000018008       0x70 ./armv7/kernel/arch/arm/omap_uart.o
+ .bss           0x0000000000018078        0x0 ./armv7/kernel/memset.o
+ .bss           0x0000000000018078        0x0 ./armv7/kernel/printf.o
+ .bss           0x0000000000018078        0x0 ./armv7/kernel/stdlib.o
+ .bss           0x0000000000018078        0x4 ./armv7/kernel/string.o
+ .bss           0x000000000001807c        0x0 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .bss           0x000000000001807c        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uldivmod.o
+ .bss           0x000000000001807c        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+ .bss           0x000000000001807c        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+ .bss           0x000000000001807c        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uidivmod.o
+ .bss           0x000000000001807c        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/udivmodsi4.o
+ .bss           0x000000000001807c        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+ COMMON         0x000000000001807c       0x14 ./armv7/kernel/arch/armv7/boot_driver.o
+                0x000000000001807c                my_core_id
+                0x0000000000018080                boot_records
+ COMMON         0x0000000000018090        0x4 ./armv7/kernel/arch/arm/multiboot.o
+                0x0000000000018090                core_data
+
+.dynbss         0x0000000000018094        0x0
+ .dynbss        0x0000000000018094        0x0 ./armv7/kernel/arch/armv7/boot.o
+
+.rel.dyn        0x0000000000018094      0x378
+ *(.rel.dyn)
+ .rel.got       0x0000000000018094      0x358 ./armv7/kernel/arch/armv7/boot.o
+ .rel.plt       0x00000000000183ec        0x0 ./armv7/kernel/arch/armv7/boot.o
+ .rel.bss       0x00000000000183ec        0x0 ./armv7/kernel/arch/armv7/boot.o
+ .rel.data.rel.ro
+                0x00000000000183ec        0x0 ./armv7/kernel/arch/armv7/boot.o
+ .rel.iplt      0x00000000000183ec        0x0 ./armv7/kernel/arch/armv7/boot.o
+ .rel.text      0x00000000000183ec       0x10 ./armv7/kernel/arch/armv7/boot.o
+ .rel.data.rel.local
+                0x00000000000183fc       0x10 ./armv7/kernel/arch/armv7/boot.o
+                0x000000000001840c                boot_end = .
+
+/DISCARD/
+ *(.eh_frame)
+ *(.eh_frame_hdr)
+ *(.interp)
+ *(.dynamic)
+OUTPUT(./armv7/sbin/boot_omap44xx elf32-littlearm)
+
+.ARM.attributes
+                0x0000000000000000       0x35
+ .ARM.attributes
+                0x0000000000000000       0x27 ./armv7/kernel/arch/armv7/boot.o
+ .ARM.attributes
+                0x0000000000000027       0x39 ./armv7/kernel/arch/armv7/boot_driver.o
+ .ARM.attributes
+                0x0000000000000060       0x39 ./armv7/kernel/arch/armv7/paging_init.o
+ .ARM.attributes
+                0x0000000000000099       0x39 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .ARM.attributes
+                0x00000000000000d2       0x39 ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+ .ARM.attributes
+                0x000000000000010b       0x39 ./armv7/kernel/arch/arm/kputchar.o
+ .ARM.attributes
+                0x0000000000000144       0x39 ./armv7/kernel/arch/arm/misc.o
+ .ARM.attributes
+                0x000000000000017d       0x39 ./armv7/kernel/arch/arm/multiboot.o
+ .ARM.attributes
+                0x00000000000001b6       0x39 ./armv7/kernel/arch/arm/omap_uart.o
+ .ARM.attributes
+                0x00000000000001ef       0x39 ./armv7/kernel/memset.o
+ .ARM.attributes
+                0x0000000000000228       0x39 ./armv7/kernel/printf.o
+ .ARM.attributes
+                0x0000000000000261       0x39 ./armv7/kernel/stdlib.o
+ .ARM.attributes
+                0x000000000000029a       0x39 ./armv7/kernel/string.o
+ .ARM.attributes
+                0x00000000000002d3       0x39 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .ARM.attributes
+                0x000000000000030c       0x27 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uldivmod.o
+ .ARM.attributes
+                0x0000000000000333       0x39 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+ .ARM.attributes
+                0x000000000000036c       0x39 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+ .ARM.attributes
+                0x00000000000003a5       0x27 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uidivmod.o
+ .ARM.attributes
+                0x00000000000003cc       0x27 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/udivmodsi4.o
+ .ARM.attributes
+                0x00000000000003f3       0x39 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+
+.comment        0x0000000000000000       0x32
+ .comment       0x0000000000000000       0x32 ./armv7/kernel/arch/armv7/boot_driver.o
+                                         0x33 (size before relaxing)
+ .comment       0x0000000000000032       0x33 ./armv7/kernel/arch/armv7/paging_init.o
+ .comment       0x0000000000000032       0x33 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .comment       0x0000000000000032       0x33 ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+ .comment       0x0000000000000032       0x33 ./armv7/kernel/arch/arm/kputchar.o
+ .comment       0x0000000000000032       0x33 ./armv7/kernel/arch/arm/misc.o
+ .comment       0x0000000000000032       0x33 ./armv7/kernel/arch/arm/multiboot.o
+ .comment       0x0000000000000032       0x33 ./armv7/kernel/arch/arm/omap_uart.o
+ .comment       0x0000000000000032       0x33 ./armv7/kernel/memset.o
+ .comment       0x0000000000000032       0x33 ./armv7/kernel/printf.o
+ .comment       0x0000000000000032       0x33 ./armv7/kernel/stdlib.o
+ .comment       0x0000000000000032       0x33 ./armv7/kernel/string.o
+ .comment       0x0000000000000032       0x33 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .comment       0x0000000000000032       0x33 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+ .comment       0x0000000000000032       0x33 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+ .comment       0x0000000000000032       0x33 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+
+.note.GNU-stack
+                0x0000000000000000        0x0
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/arch/armv7/boot_driver.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/arch/armv7/paging_init.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/arch/arm/kputchar.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/arch/arm/misc.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/arch/arm/multiboot.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/arch/arm/omap_uart.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/memset.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/printf.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/stdlib.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/kernel/string.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+
+.debug_line     0x0000000000000000     0x407c
+ .debug_line    0x0000000000000000       0x83 ./armv7/kernel/arch/armv7/boot.o
+ .debug_line    0x0000000000000083      0x8f4 ./armv7/kernel/arch/armv7/boot_driver.o
+ .debug_line    0x0000000000000977      0x5e5 ./armv7/kernel/arch/armv7/paging_init.o
+ .debug_line    0x0000000000000f5c      0x3e5 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .debug_line    0x0000000000001341      0x332 ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+ .debug_line    0x0000000000001673      0x1c3 ./armv7/kernel/arch/arm/kputchar.o
+ .debug_line    0x0000000000001836      0x3c5 ./armv7/kernel/arch/arm/misc.o
+ .debug_line    0x0000000000001bfb      0x565 ./armv7/kernel/arch/arm/multiboot.o
+ .debug_line    0x0000000000002160      0x72b ./armv7/kernel/arch/arm/omap_uart.o
+ .debug_line    0x000000000000288b      0x290 ./armv7/kernel/memset.o
+ .debug_line    0x0000000000002b1b      0x7a3 ./armv7/kernel/printf.o
+ .debug_line    0x00000000000032be      0x2d0 ./armv7/kernel/stdlib.o
+ .debug_line    0x000000000000358e      0x3a9 ./armv7/kernel/string.o
+ .debug_line    0x0000000000003937      0x2f0 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .debug_line    0x0000000000003c27       0x8c ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uldivmod.o
+ .debug_line    0x0000000000003cb3      0x155 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+ .debug_line    0x0000000000003e08       0xac ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+ .debug_line    0x0000000000003eb4       0x8a ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uidivmod.o
+ .debug_line    0x0000000000003f3e       0xbb ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/udivmodsi4.o
+ .debug_line    0x0000000000003ff9       0x83 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+
+.debug_info     0x0000000000000000    0x13436
+ .debug_info    0x0000000000000000       0x26 ./armv7/kernel/arch/armv7/boot.o
+ .debug_info    0x0000000000000026     0x2f83 ./armv7/kernel/arch/armv7/boot_driver.o
+ .debug_info    0x0000000000002fa9     0x2787 ./armv7/kernel/arch/armv7/paging_init.o
+ .debug_info    0x0000000000005730      0xc0f ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .debug_info    0x000000000000633f      0xa8d ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+ .debug_info    0x0000000000006dcc      0x2bb ./armv7/kernel/arch/arm/kputchar.o
+ .debug_info    0x0000000000007087      0xc1a ./armv7/kernel/arch/arm/misc.o
+ .debug_info    0x0000000000007ca1     0x1c1f ./armv7/kernel/arch/arm/multiboot.o
+ .debug_info    0x00000000000098c0     0x536d ./armv7/kernel/arch/arm/omap_uart.o
+ .debug_info    0x000000000000ec2d      0x98d ./armv7/kernel/memset.o
+ .debug_info    0x000000000000f5ba     0x10a2 ./armv7/kernel/printf.o
+ .debug_info    0x000000000001065c      0xb82 ./armv7/kernel/stdlib.o
+ .debug_info    0x00000000000111de      0xf63 ./armv7/kernel/string.o
+ .debug_info    0x0000000000012141      0xe8d ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .debug_info    0x0000000000012fce       0x26 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uldivmod.o
+ .debug_info    0x0000000000012ff4      0x1b9 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+ .debug_info    0x00000000000131ad      0x1a4 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+ .debug_info    0x0000000000013351       0x26 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uidivmod.o
+ .debug_info    0x0000000000013377       0x26 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/udivmodsi4.o
+ .debug_info    0x000000000001339d       0x99 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+
+.debug_abbrev   0x0000000000000000     0x2a40
+ .debug_abbrev  0x0000000000000000       0x14 ./armv7/kernel/arch/armv7/boot.o
+ .debug_abbrev  0x0000000000000014      0x532 ./armv7/kernel/arch/armv7/boot_driver.o
+ .debug_abbrev  0x0000000000000546      0x48b ./armv7/kernel/arch/armv7/paging_init.o
+ .debug_abbrev  0x00000000000009d1      0x282 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .debug_abbrev  0x0000000000000c53      0x1b9 ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+ .debug_abbrev  0x0000000000000e0c      0x1a3 ./armv7/kernel/arch/arm/kputchar.o
+ .debug_abbrev  0x0000000000000faf      0x2b3 ./armv7/kernel/arch/arm/misc.o
+ .debug_abbrev  0x0000000000001262      0x381 ./armv7/kernel/arch/arm/multiboot.o
+ .debug_abbrev  0x00000000000015e3      0x46e ./armv7/kernel/arch/arm/omap_uart.o
+ .debug_abbrev  0x0000000000001a51      0x1fb ./armv7/kernel/memset.o
+ .debug_abbrev  0x0000000000001c4c      0x31b ./armv7/kernel/printf.o
+ .debug_abbrev  0x0000000000001f67      0x264 ./armv7/kernel/stdlib.o
+ .debug_abbrev  0x00000000000021cb      0x315 ./armv7/kernel/string.o
+ .debug_abbrev  0x00000000000024e0      0x2e4 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .debug_abbrev  0x00000000000027c4       0x14 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uldivmod.o
+ .debug_abbrev  0x00000000000027d8       0xfa ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+ .debug_abbrev  0x00000000000028d2       0xe0 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+ .debug_abbrev  0x00000000000029b2       0x14 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uidivmod.o
+ .debug_abbrev  0x00000000000029c6       0x14 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/udivmodsi4.o
+ .debug_abbrev  0x00000000000029da       0x66 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+
+.debug_aranges  0x0000000000000000      0x278
+ .debug_aranges
+                0x0000000000000000       0x20 ./armv7/kernel/arch/armv7/boot.o
+ .debug_aranges
+                0x0000000000000020       0x20 ./armv7/kernel/arch/armv7/boot_driver.o
+ .debug_aranges
+                0x0000000000000040       0x20 ./armv7/kernel/arch/armv7/paging_init.o
+ .debug_aranges
+                0x0000000000000060       0x20 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .debug_aranges
+                0x0000000000000080       0x18 ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+ .debug_aranges
+                0x0000000000000098       0x20 ./armv7/kernel/arch/arm/kputchar.o
+ .debug_aranges
+                0x00000000000000b8       0x20 ./armv7/kernel/arch/arm/misc.o
+ .debug_aranges
+                0x00000000000000d8       0x20 ./armv7/kernel/arch/arm/multiboot.o
+ .debug_aranges
+                0x00000000000000f8       0x20 ./armv7/kernel/arch/arm/omap_uart.o
+ .debug_aranges
+                0x0000000000000118       0x20 ./armv7/kernel/memset.o
+ .debug_aranges
+                0x0000000000000138       0x20 ./armv7/kernel/printf.o
+ .debug_aranges
+                0x0000000000000158       0x20 ./armv7/kernel/stdlib.o
+ .debug_aranges
+                0x0000000000000178       0x20 ./armv7/kernel/string.o
+ .debug_aranges
+                0x0000000000000198       0x20 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .debug_aranges
+                0x00000000000001b8       0x20 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uldivmod.o
+ .debug_aranges
+                0x00000000000001d8       0x20 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+ .debug_aranges
+                0x00000000000001f8       0x20 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+ .debug_aranges
+                0x0000000000000218       0x20 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uidivmod.o
+ .debug_aranges
+                0x0000000000000238       0x20 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/udivmodsi4.o
+ .debug_aranges
+                0x0000000000000258       0x20 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+
+.debug_str      0x0000000000000000     0x826e
+ .debug_str     0x0000000000000000       0x73 ./armv7/kernel/arch/armv7/boot.o
+ .debug_str     0x0000000000000073     0x19d0 ./armv7/kernel/arch/armv7/boot_driver.o
+                                       0x1e8a (size before relaxing)
+ .debug_str     0x0000000000001a43      0x1e4 ./armv7/kernel/arch/armv7/paging_init.o
+                                       0x1910 (size before relaxing)
+ .debug_str     0x0000000000001c27      0x15c ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+                                        0x8f0 (size before relaxing)
+ .debug_str     0x0000000000001d83       0x64 ./armv7/kernel/arch/armv7/plat_omap44xx_consts.o
+                                        0x820 (size before relaxing)
+ .debug_str     0x0000000000001de7       0xc3 ./armv7/kernel/arch/arm/kputchar.o
+                                        0x313 (size before relaxing)
+ .debug_str     0x0000000000001eaa       0x72 ./armv7/kernel/arch/arm/misc.o
+                                        0x80e (size before relaxing)
+ .debug_str     0x0000000000001f1c       0xcc ./armv7/kernel/arch/arm/multiboot.o
+                                       0x16c7 (size before relaxing)
+ .debug_str     0x0000000000001fe8     0x5c17 ./armv7/kernel/arch/arm/omap_uart.o
+                                       0x7013 (size before relaxing)
+ .debug_str     0x0000000000007bff       0x45 ./armv7/kernel/memset.o
+                                        0x683 (size before relaxing)
+ .debug_str     0x0000000000007c44       0xff ./armv7/kernel/printf.o
+                                        0x92a (size before relaxing)
+ .debug_str     0x0000000000007d43       0x78 ./armv7/kernel/stdlib.o
+                                        0x6bc (size before relaxing)
+ .debug_str     0x0000000000007dbb       0x8e ./armv7/kernel/string.o
+                                        0x70e (size before relaxing)
+ .debug_str     0x0000000000007e49      0x180 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+                                        0x717 (size before relaxing)
+ .debug_str     0x0000000000007fc9       0x55 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uldivmod.o
+                                         0x88 (size before relaxing)
+ .debug_str     0x000000000000801e       0xc9 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+                                        0x26d (size before relaxing)
+ .debug_str     0x00000000000080e7       0x5b ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+                                        0x245 (size before relaxing)
+ .debug_str     0x0000000000008142       0x55 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_uidivmod.o
+                                         0x88 (size before relaxing)
+ .debug_str     0x0000000000008197       0x51 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/udivmodsi4.o
+                                         0x84 (size before relaxing)
+ .debug_str     0x00000000000081e8       0x86 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o
+                                        0x1bf (size before relaxing)
+
+.debug_loc      0x0000000000000000     0x51f3
+ .debug_loc     0x0000000000000000      0x533 ./armv7/kernel/arch/armv7/boot_driver.o
+ .debug_loc     0x0000000000000533      0x4e0 ./armv7/kernel/arch/armv7/paging_init.o
+ .debug_loc     0x0000000000000a13      0x111 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .debug_loc     0x0000000000000b24       0xdf ./armv7/kernel/arch/arm/kputchar.o
+ .debug_loc     0x0000000000000c03       0xc6 ./armv7/kernel/arch/arm/misc.o
+ .debug_loc     0x0000000000000cc9      0x246 ./armv7/kernel/arch/arm/multiboot.o
+ .debug_loc     0x0000000000000f0f     0x1e2c ./armv7/kernel/arch/arm/omap_uart.o
+ .debug_loc     0x0000000000002d3b      0x113 ./armv7/kernel/memset.o
+ .debug_loc     0x0000000000002e4e     0x1164 ./armv7/kernel/printf.o
+ .debug_loc     0x0000000000003fb2      0x1ae ./armv7/kernel/stdlib.o
+ .debug_loc     0x0000000000004160      0x8ac ./armv7/kernel/string.o
+ .debug_loc     0x0000000000004a0c      0x386 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .debug_loc     0x0000000000004d92      0x373 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+ .debug_loc     0x0000000000005105       0xee ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+
+.debug_ranges   0x0000000000000000      0x840
+ .debug_ranges  0x0000000000000000      0x210 ./armv7/kernel/arch/armv7/boot_driver.o
+ .debug_ranges  0x0000000000000210       0x88 ./armv7/kernel/arch/armv7/paging_init.o
+ .debug_ranges  0x0000000000000298       0x30 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .debug_ranges  0x00000000000002c8       0x98 ./armv7/kernel/arch/arm/kputchar.o
+ .debug_ranges  0x0000000000000360       0xc0 ./armv7/kernel/arch/arm/multiboot.o
+ .debug_ranges  0x0000000000000420      0x230 ./armv7/kernel/arch/arm/omap_uart.o
+ .debug_ranges  0x0000000000000650       0x20 ./armv7/kernel/printf.o
+ .debug_ranges  0x0000000000000670       0x30 ./armv7/kernel/stdlib.o
+ .debug_ranges  0x00000000000006a0       0x98 ./armv7/kernel/string.o
+ .debug_ranges  0x0000000000000738       0xf0 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .debug_ranges  0x0000000000000828       0x18 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+
+.debug_frame    0x0000000000000000      0x7f4
+ .debug_frame   0x0000000000000000       0xd4 ./armv7/kernel/arch/armv7/boot_driver.o
+ .debug_frame   0x00000000000000d4       0x80 ./armv7/kernel/arch/armv7/paging_init.o
+ .debug_frame   0x0000000000000154       0x20 ./armv7/kernel/arch/armv7/plat_omap44xx_boot.o
+ .debug_frame   0x0000000000000174       0x78 ./armv7/kernel/arch/arm/kputchar.o
+ .debug_frame   0x00000000000001ec       0x94 ./armv7/kernel/arch/arm/misc.o
+ .debug_frame   0x0000000000000280       0x70 ./armv7/kernel/arch/arm/multiboot.o
+ .debug_frame   0x00000000000002f0       0xd0 ./armv7/kernel/arch/arm/omap_uart.o
+ .debug_frame   0x00000000000003c0       0x28 ./armv7/kernel/memset.o
+ .debug_frame   0x00000000000003e8      0x144 ./armv7/kernel/printf.o
+ .debug_frame   0x000000000000052c       0x58 ./armv7/kernel/stdlib.o
+ .debug_frame   0x0000000000000584      0x154 ./armv7/kernel/string.o
+ .debug_frame   0x00000000000006d8       0x44 ./armv7/lib/getopt/_for_lib_getopt/getopt.o
+ .debug_frame   0x000000000000071c       0x58 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivmoddi4.o
+ .debug_frame   0x0000000000000774       0x30 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/udivsi3.o
+ .debug_frame   0x00000000000007a4       0x50 ./armv7/lib/compiler-rt/builtins/_for_lib_compiler-rt/arm/aeabi_div0.o

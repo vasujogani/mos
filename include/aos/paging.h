@@ -44,10 +44,35 @@ typedef int paging_flags_t;
 #define VREGION_FLAGS_READ_WRITE_MPB \
     (VREGION_FLAGS_READ | VREGION_FLAGS_WRITE | VREGION_FLAGS_MPB)
 
+struct l2_pt {
+    struct capref cap;
+    bool initialized;
+};
+
+/*
+VASU
+
+enum v_region_nodetype {
+    NodeType_Free,
+    NodeType_Allocated
+}
+
+// v_region_node
+struct v_region_metadata {
+    enum v_region_nodetype;
+    lvaddr_t base;
+    size_t size;
+    struct v_region_metadata *next;
+}
+*/
+
 // struct to store the paging status of a process
 struct paging_state {
     struct slot_allocator* slot_alloc;
+    // VASU struct v_region_metadata *v_space_list;
     // TODO: add struct members to keep track of the page tables etc
+    struct capref l1_pt;
+    struct l2_pt l2_pts[ARM_L1_MAX_ENTRIES];
 };
 
 

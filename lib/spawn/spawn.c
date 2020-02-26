@@ -8,6 +8,7 @@
 #include <spawn/multiboot.h>
 
 extern struct bootinfo *bi;
+
 // extern struct mm aos_mm; TODO ask about this!!!!
 
 // TODO(M2): Implement this function such that it starts a new process
@@ -207,6 +208,7 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
 
     // TODO: Implement me
     // - Map multiboot module in your address space
+
     // - Setup childs vspace
     // - Load the ELF binary
     // - Setup dispatcher
