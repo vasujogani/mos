@@ -224,65 +224,84 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
     errval_t err;
 
     struct capref l2;
-    // check if l2 pt already exists
-    if (st->l2_pts[ARM_L1_OFFSET(vaddr)].initialized == true) {
-        l2 = st->l2_pts[ARM_L1_OFFSET(vaddr)].cap;
-    }
-    // otherwise, allocate the l2 pt
-    else {
-        err = arml2_alloc(st, &l2);
-        if (err_is_fail(err)) {
-            debug_printf("arml2_alloc failed: %s\n", err_getstring(err));
-            return err;
-        }
-        // update the l1 pt
-        // need to call vnode_map
-        struct capref l1mapping;
-        err = st->slot_alloc->alloc(st->slot_alloc, &l1mapping);
-        if (err_is_fail(err)) {
-            debug_printf("slot_alloc failed: %s\n", err_getstring(err));
-            return err;
-        }
-
-        err = vnode_map(st->l1_pt, l2, ARM_L1_OFFSET(vaddr), VREGION_FLAGS_READ_WRITE, 0, 1, l1mapping);
-        if (err_is_fail(err)) {
-            debug_printf("vnode_map failed: %s\n", err_getstring(err));
-            return err;
-        }
-        
-        // update the page_info struct to include the new l2 pt
-        st->l2_pts[ARM_L1_OFFSET(vaddr)].initialized = true;
-        st->l2_pts[ARM_L1_OFFSET(vaddr)].cap = l2;
-    }
-   
-    // need to determine the pte_count based on the size of the frame
-    // also, what do you pass for the offset? 
-    // struct frame_identity fi;
-    // err = frame_identify(frame, &fi);
-    // if (err_is_fail(err)) {
-    //     debug_printf("frame_identify failed: %s\n", err_getstring(err));
-    // } 
     
-    // determine pte_count based on size of frame
-    // call slot_alloc to get a capref for mapping ???
-    struct capref mapping;
-    
-    err = st->slot_alloc->alloc(st->slot_alloc, &mapping);
-    if (err_is_fail(err)) {
-        debug_printf("slot_alloc failed: %s\n", err_getstring(err));
-        return err;
-    }
-
     // round bytes up to page size to get the number of ptes needed to be mapped
     if (bytes % BASE_PAGE_SIZE != 0) {
         bytes += (size_t) BASE_PAGE_SIZE - (bytes % BASE_PAGE_SIZE);
     }
 
     int pte_count = bytes / BASE_PAGE_SIZE;
-    err = vnode_map(l2, frame, ARM_L2_OFFSET(vaddr), flags, 0, pte_count, mapping);
-    if (err_is_fail(err)) {
-        debug_printf("vnode_map failed: %s\n", err_getstring(err));
-        return err;
+    int remaining_ptes, frame_offset;
+    frame_offset = 0;
+
+    while ( pte_count > 0 )
+    {
+        // check if l2 pt already exists
+        if (st->l2_pts[ARM_L1_OFFSET(vaddr)].initialized == true) {
+            l2 = st->l2_pts[ARM_L1_OFFSET(vaddr)].cap;
+        }
+        // otherwise, allocate the l2 pt
+        else {
+            err = arml2_alloc(st, &l2);
+            if (err_is_fail(err)) {
+                debug_printf("arml2_alloc failed: %s\n", err_getstring(err));
+                return err;
+            }
+            // update the l1 pt
+            // need to call vnode_map
+            struct capref l1mapping;
+            err = st->slot_alloc->alloc(st->slot_alloc, &l1mapping);
+            if (err_is_fail(err)) {
+                debug_printf("slot_alloc failed: %s\n", err_getstring(err));
+                return err;
+            }
+
+            err = vnode_map(st->l1_pt, l2, ARM_L1_OFFSET(vaddr), VREGION_FLAGS_READ_WRITE, 0, 1, l1mapping);
+            if (err_is_fail(err)) {
+                debug_printf("vnode_map failed: %s\n", err_getstring(err));
+                return err;
+            }
+            
+            // update the page_info struct to include the new l2 pt
+            st->l2_pts[ARM_L1_OFFSET(vaddr)].initialized = true;
+            st->l2_pts[ARM_L1_OFFSET(vaddr)].cap = l2;
+        }
+   
+        // need to determine the pte_count based on the size of the frame
+        // also, what do you pass for the offset? 
+        // struct frame_identity fi;
+        // err = frame_identify(frame, &fi);
+        // if (err_is_fail(err)) {
+        //     debug_printf("frame_identify failed: %s\n", err_getstring(err));
+        // } 
+        
+        // determine pte_count based on size of frame
+        // call slot_alloc to get a capref for mapping ???
+        struct capref mapping;
+        
+        err = st->slot_alloc->alloc(st->slot_alloc, &mapping);
+        if (err_is_fail(err)) {
+            debug_printf("slot_alloc failed: %s\n", err_getstring(err));
+            return err;
+        }
+
+        // get the ptes available in this table past the offset
+        remaining_ptes = ARM_L2_MAX_ENTRIES - ARM_L2_OFFSET(vaddr);
+        
+        if (remaining_ptes < pte_count) {
+            err = vnode_map(l2, frame, ARM_L2_OFFSET(vaddr), flags, frame_offset, remaining_ptes, mapping);
+            pte_count -= remaining_ptes;
+            vaddr += remaining_ptes * BASE_PAGE_SIZE;
+            frame_offset += remaining_ptes * BASE_PAGE_SIZE;
+        } 
+        else {
+            err = vnode_map(l2, frame, ARM_L2_OFFSET(vaddr), flags, frame_offset, pte_count, mapping);
+            pte_count = 0;
+        }
+        if (err_is_fail(err)) {
+            debug_printf("vnode_map failed: %s\n", err_getstring(err));
+            return err;
+        }
     }
     return SYS_ERR_OK;
 }
