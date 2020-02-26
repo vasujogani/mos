@@ -66,8 +66,8 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
     st->v_space_list.v_region_nodetype = NodeType_Free;
     */
     slab_init(&st->slabs, sizeof(struct v_region_metadata), slab_default_refill);
-    struct v_region_metadata *head = slab_alloc(st->slabs);
-    head->type = NodeType_Free;
+    struct v_region_metadata *head = slab_alloc(&st->slabs);
+    head->type = Nodetype_Free;
     head->base = start_vaddr;
     // TODO (M2):
     // get addresses from the lecture slides
@@ -188,7 +188,7 @@ errval_t paging_alloc(struct paging_state *st, void **buf, size_t bytes)
 {
     struct v_region_metadata *node = st->v_space_list; 
     while (node) {
-        if (node->type == NodeType_Free && node->size >= bytes) {
+        if (node->type == Nodetype_Free && node->size >= bytes) {
             *buf = (void*) node->base;
             // TODO(M2): Should rounding be moved outside of the loop?
             node->base += bytes + (BASE_PAGE_SIZE - bytes % BASE_PAGE_SIZE);
@@ -257,20 +257,20 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
 
     // TODO(M2): Create a node to keep track of allocated space
     // Should this be here, or in paging_alloc?
-    struct v_region_metadata *allocated = slab_alloc(st->slabs);
-    allocated->type = NodeType_Allocated;
+    struct v_region_metadata *allocated = slab_alloc(&st->slabs);
+    allocated->type = Nodetype_Allocated;
     allocated->base = vaddr;
     allocated->size = bytes;
     // insert in the list st keeps track of
     // TODO(M2): Verify that this is correct
 
     // Use 1 list - make coalescing easier 
-    struct v_region_metadata *current = st->v_space_list;
-    while (current->next && current->base < vaddr) {
-        current = current->next;
+    struct v_region_metadata *node = st->v_space_list;
+    while (node->next && node->base < vaddr) {
+        node = node->next;
     }
-    allocated->next = current->next;
-    current->next = allocated;
+    allocated->next = node->next;
+    node->next = allocated;
   
     /* 
     // or use 2 lists - fewer checks when allocating 

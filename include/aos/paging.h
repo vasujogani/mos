@@ -50,8 +50,8 @@ struct l2_pt {
 };
 
 enum v_region_nodetype {
-    NodeType_Free,
-    NodeType_Allocated
+    Nodetype_Free,
+    Nodetype_Allocated
 };
 
 // v_region_node
