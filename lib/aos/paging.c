@@ -23,6 +23,7 @@
 #include <string.h>
 
 static struct paging_state current;
+struct v_region_metadata *stay;
 
 /**
  * \brief Helper function that allocates a slot and
@@ -72,11 +73,14 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
     slab_grow(&(st->slabs), nodebuf, sizeof(nodebuf));
     printf("Free count starts at %d\n", slab_freecount(&(st->slabs)));
     struct v_region_metadata *head = slab_alloc(&st->slabs);
+    printf("My head starts at %p\n", head);
     head->type = Nodetype_Free;
     head->base = start_vaddr;
     head->size = 0x8000000 - start_vaddr;
     head->next = NULL;
     st->v_space_list = head;
+    printf("READY!\n");
+    ps_print(st);
     return SYS_ERR_OK;
 }
 
@@ -103,7 +107,7 @@ errval_t paging_init(void)
 
     struct slot_allocator *default_allocator = get_default_slot_allocator();
     // TODO (M2): Set start_vaddr to the appropriate address
-    paging_init_state(&current, (1<<25), l1_pt, default_allocator); 
+    paging_init_state(&current, (1 << 25), l1_pt, default_allocator); 
     return SYS_ERR_OK;
 }
 
@@ -186,27 +190,48 @@ errval_t paging_region_unmap(struct paging_region *pr, lvaddr_t base, size_t byt
  */
 errval_t paging_alloc(struct paging_state *st, void **buf, size_t bytes)
 {
+    errval_t err;
     struct v_region_metadata *node = st->v_space_list; 
     if (bytes % BASE_PAGE_SIZE != 0) {
         bytes += BASE_PAGE_SIZE - (bytes % BASE_PAGE_SIZE);
     }
-
+    
     struct v_region_metadata *prev = NULL;
 
     while (node) {
         if (node->type == Nodetype_Free && node->size >= bytes) {
             *buf = (void*) node->base;
-            printf("buf is at %p\n", *buf);
+           
+	    // need to add to the allocated list 
+            if (slab_freecount(&st->slabs) < 4 && !st->refillingslabs) {
+                st->refillingslabs = true;
+                err = st->slabs.refill_func(&st->slabs);
+                st->refillingslabs = false;
+                
+                if (err_is_fail(err)) {
+                    debug_printf("paging_map_fixed_attr: slab_refill failed\n");
+                    return err;
+                }
+            }
+            struct v_region_metadata *allocated = slab_alloc(&st->slabs);
+            allocated->type = Nodetype_Allocated;
+            allocated->base = node->base;
+            allocated->size = bytes;
+
+	    // need to insert at the head
+	    if (prev == NULL) {
+		st->v_space_list = allocated;
+	    }
+	    else {
+	        prev->next = allocated;
+	    }
+            allocated->next = node;
+
             node->base += bytes; 
             node->size -= bytes;
             if (node->size == 0) {
-                // Corner case: head needs to be deleted
-                if (node == st->v_space_list) {
-                    st->v_space_list = node->next;
-                }
-                else {
-                    prev->next = node->next;
-                }
+                allocated->next = node->next;
+                assert(false);
                 slab_free(&st->slabs, node);
             }
             return SYS_ERR_OK;
@@ -215,9 +240,25 @@ errval_t paging_alloc(struct paging_state *st, void **buf, size_t bytes)
         node = node->next;
     }
     *buf = NULL;
-    printf("Getting here, shouldnt\n");
     return LIB_ERR_OUT_OF_VIRTUAL_ADDR;
 }
+
+void ps_print(struct paging_state *st) {
+	struct v_region_metadata *n = st->v_space_list;
+	int idx = 0;
+	while (n) {
+		if (n->type == Nodetype_Free) {
+			printf("    VREGIONNODE meta %d: base: %zx, size: %zu KB - %p ", idx, n->base, n->size / 1024, n);
+			printf("== Free\n");
+		} else {
+			printf("    VREGIONNODE meta %d: base: %zx, size: %zu KB - %p ", idx, n->base, n->size / 1024, n);
+			printf("== Allocated \n");
+		}
+		n = n->next;
+		idx++;
+	}
+}
+
 
 /**
  * \brief map a user provided frame, and return the VA of the mapped
@@ -228,13 +269,10 @@ errval_t paging_map_frame_attr(struct paging_state *st, void **buf,
                                int flags, void *arg1, void *arg2)
 {
     errval_t err = paging_alloc(st, buf, bytes);
-    printf("PAst paging alloc\n");
     if (err_is_fail(err)) {
         return err;
     }
-    printf("No err\n");
     err = paging_map_fixed_attr(st, (lvaddr_t)(*buf), frame, bytes, flags);
-    printf("After mapping\n");
     return err;
 }
 
@@ -258,7 +296,6 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
     // if they went through paging_alloc. Don't go through - their problem. 
     // align the vaddr
     assert(vaddr % BASE_PAGE_SIZE == 0);
-    printf("vaddr is %zx and bytes is %"PRIu64"\n", vaddr, bytes);
     
     errval_t err;
 
@@ -276,44 +313,10 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
     // TODO(M2): Create a node to keep track of allocated space
     // Should this be here, or in paging_alloc?
     // probably doesn't make a difference
-    printf("1\n");
-    printf("Free count is %d\n", slab_freecount(&(current.slabs)));
-    if (slab_freecount(&st->slabs) < 4 && !st->refillingslabs) {
-        printf("2\n");
-        st->refillingslabs = true;
-        printf("3\n");
-        err = st->slabs.refill_func(&st->slabs);
-        printf("4\n");
-        st->refillingslabs = false;
-        
-        if (err_is_fail(err)) {
-            debug_printf("paging_map_fixed_attr: slab_refill failed\n");
-            return err;
-        }
-    }
-    printf("1\n");
-    struct v_region_metadata *allocated = slab_alloc(&st->slabs);
-    allocated->type = Nodetype_Allocated;
-    allocated->base = vaddr;
-    allocated->size = bytes;
     // insert in the list st keeps track of
     // TODO(M2): Verify that this is correct
 
     // Use 1 list - make coalescing easier 
-    struct v_region_metadata *node = st->v_space_list;
-    printf("2\n");
-    if (node->base > vaddr) {
-        allocated->next = node;
-        st->v_space_list = allocated;
-    }
-    else {
-        while (node->next && node->next->base < vaddr) {
-            node = node->next;
-        }
-        allocated->next = node->next;
-        node->next = allocated;
-    }
-    printf("3\n");
     while ( pte_count > 0 )
     {
         // check if l2 pt already exists
@@ -359,7 +362,6 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
 
         // get the ptes available in this table past the offset
         remaining_ptes = ARM_L2_MAX_ENTRIES - ARM_L2_OFFSET(vaddr);
-        printf("3\n");
         if (remaining_ptes < pte_count) {
             err = vnode_map(l2, frame, ARM_L2_OFFSET(vaddr), flags, frame_offset, remaining_ptes, mapping);
             if (err_is_fail(err)) {
@@ -390,7 +392,6 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
                 debug_printf("vnode_map failed: %s\n", err_getstring(err));
                 return err;
             }
-            printf("4\n");
             pte_count = 0;
         }
     }

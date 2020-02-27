@@ -161,4 +161,5 @@ static inline lvaddr_t paging_genvaddr_to_lvaddr(genvaddr_t genvaddr) {
     return (lvaddr_t) genvaddr;
 }
 
+void ps_print(struct paging_state *st);
 #endif // LIBBARRELFISH_PAGING_H
