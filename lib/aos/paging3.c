@@ -18,12 +18,12 @@
 #include <aos/slab.h>
 #include "threads_priv.h"
 #include <mm/mm.h>
-#include "bitmap.h"
 
 #include <stdio.h>
 #include <string.h>
 
 static struct paging_state current;
+struct v_region_metadata *stay;
 
 /**
  * \brief Helper function that allocates a slot and
@@ -68,11 +68,19 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
     st->v_space_list.v_region_nodetype = NodeType_Free;
     */
     // errval_t err;
-    int num_pages = (0x8000000 - start_vaddr) / BASE_PAGE_SIZE;
-    struct bitmap *bp = bitmap_alloc(num_pages);
-    bitmap_set_all(bp);
-    printf("I have %i bits\n", bitmap_get_nbits(bp));
-    st->bp = bp;
+    slab_init(&(st->slabs), sizeof(struct v_region_metadata), slab_default_refill);
+    static char nodebuf[sizeof(struct v_region_metadata)*64];
+    slab_grow(&(st->slabs), nodebuf, sizeof(nodebuf));
+    printf("Free count starts at %d\n", slab_freecount(&(st->slabs)));
+    struct v_region_metadata *head = slab_alloc(&st->slabs);
+    printf("My head starts at %p\n", head);
+    head->type = Nodetype_Free;
+    head->base = start_vaddr;
+    head->size = 0x8000000 - start_vaddr;
+    head->next = NULL;
+    st->v_space_list = head;
+    printf("READY!\n");
+    ps_print(st);
     return SYS_ERR_OK;
 }
 
@@ -182,44 +190,131 @@ errval_t paging_region_unmap(struct paging_region *pr, lvaddr_t base, size_t byt
  */
 errval_t paging_alloc(struct paging_state *st, void **buf, size_t bytes)
 {
+    errval_t err;
+    struct v_region_metadata *node = st->v_space_list; 
     if (bytes % BASE_PAGE_SIZE != 0) {
         bytes += BASE_PAGE_SIZE - (bytes % BASE_PAGE_SIZE);
     }
     
-    int num_bits = (bytes / BASE_PAGE_SIZE) - 1; 
-    bool found = false;
-    int start = bitmap_get_first(st->bp);
-    while (!found && start && start != BITMAP_BIT_NONE) {
-        found = true;
-        for (int i = 1; i < num_bits; i++) {
-            if (!bitmap_is_bit_set(st->bp, start + i)) {
-                found = false;
-                break;
+    struct v_region_metadata *prev = NULL;
+
+    while (node) {
+        if (node->type == Nodetype_Free && node->size >= bytes) {
+            *buf = (void*) node->base;
+           
+	    // need to add to the allocated list 
+            if (slab_freecount(&st->slabs) < 4 && !st->refillingslabs) {
+                st->refillingslabs = true;
+                err = st->slabs.refill_func(&st->slabs);
+                st->refillingslabs = false;
+                
+                if (err_is_fail(err)) {
+                    debug_printf("paging_map_fixed_attr: slab_refill failed\n");
+                    return err;
+                }
             }
-        }
-        if (found) {
-            bitmap_clear_range(st->bp, start, start + num_bits - 1);
-            *buf = (void *)((lvaddr_t)(start * BASE_PAGE_SIZE) + st->start_addr);
-            return SYS_ERR_OK;
-        } 
-        start = bitmap_get_next(st->bp, start);
+            struct v_region_metadata *allocated = slab_alloc(&st->slabs);
+            allocated->type = Nodetype_Allocated;
+            allocated->base = node->base;
+            allocated->size = bytes;
+
+            // need to insert at the head
+            if (prev == NULL) {
+                st->v_space_list = allocated;
+            }
+            else {
+                prev->next = allocated;
+            }
+                allocated->next = node;
+
+                node->base += bytes; 
+                node->size -= bytes;
+                if (node->size == 0) {
+                    allocated->next = node->next;
+                    slab_free(&st->slabs, node);
+                }
+                return SYS_ERR_OK;
+            }
+        prev = node;
+        node = node->next;
     }
     *buf = NULL;
     return LIB_ERR_OUT_OF_VIRTUAL_ADDR;
 }
 
-errval_t paging_alloc_predefined_addr(struct paging_state *st, size_t bytes, lvaddr_t vaddr) {
+errval_t paging_alloc_predefined_addr(struct paging_state *st, void **buf, size_t bytes, lvaddr_t vaddr) {
+    errval_t err;
+    struct v_region_metadata *node = st->v_space_list; 
     if (bytes % BASE_PAGE_SIZE != 0) {
         bytes += BASE_PAGE_SIZE - (bytes % BASE_PAGE_SIZE);
     }
     
-    int num_bits = (bytes / BASE_PAGE_SIZE) - 1; 
-    int start_bit = (vaddr - st->start_addr) / BASE_PAGE_SIZE;    
-    for (int i = start_bit; i < start_bit + num_bits; i++) {
-        assert(bitmap_is_bit_set(st->bp, i));
+    struct v_region_metadata *prev = NULL;
+
+    while (node->type == Nodetype_Free && node->base <= vaddr) {
+        prev = node;
+        node = node->next;
     }
-    bitmap_clear_range(st->bp, start_bit, start_bit + num_bits - 1);
-    return SYS_ERR_OK;
+    // prev will store correct node to mark allocated
+    if (prev->base == vaddr) {
+        prev->size 
+    }
+    struct v_region_metadata *allocated = slab_alloc(&st->slabs);
+    allocated->type = Nodetype_Allocated;
+    allocated->base = vaddr;
+    allocated->size = bytes;
+    if (allocated->base == prev->base) {
+        prev->base += bytes;
+        prev->size -= bytes;
+        allocated->next = prev;
+
+    } else {
+        struct v_region_metadata *offset = slab_alloc(&st->slabs);
+        offset->type = Nodetype_Free;
+        offset->base = prev->base;
+        offset->size = prev->size - bytes;
+    }
+        if (node->type == Nodetype_Free && node->base <= vaddr) {
+            *buf = (void*) node->base;
+           
+	    // need to add to the allocated list 
+            if (slab_freecount(&st->slabs) < 4 && !st->refillingslabs) {
+                st->refillingslabs = true;
+                err = st->slabs.refill_func(&st->slabs);
+                st->refillingslabs = false;
+                
+                if (err_is_fail(err)) {
+                    debug_printf("paging_map_fixed_attr: slab_refill failed\n");
+                    return err;
+                }
+            }
+            struct v_region_metadata *allocated = slab_alloc(&st->slabs);
+            allocated->type = Nodetype_Allocated;
+            allocated->base = node->base;
+            allocated->size = bytes;
+
+            // need to insert at the head
+            if (prev == NULL) {
+                st->v_space_list = allocated;
+            }
+            else {
+                prev->next = allocated;
+            }
+                allocated->next = node;
+
+                node->base += bytes; 
+                node->size -= bytes;
+                if (node->size == 0) {
+                    allocated->next = node->next;
+                    slab_free(&st->slabs, node);
+                }
+                return SYS_ERR_OK;
+            }
+        prev = node;
+        node = node->next;
+    }
+    *buf = NULL;
+    return LIB_ERR_OUT_OF_VIRTUAL_ADDR;
 }
 
 void ps_print(struct paging_state *st) {
@@ -275,10 +370,8 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
     // if they went through paging_alloc. Don't go through - their problem. 
     // align the vaddr
     assert(vaddr % BASE_PAGE_SIZE == 0);
-
+    
     errval_t err;
-
-    err = paging_alloc_predefined_addr(st, bytes, vaddr);
 
     struct capref l2;
     

@@ -57,9 +57,6 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
         }
     } 
 
-
-
-    
     // copy L1 root capability
     struct capref curr_ref;
     curr_ref.slot = TASKCN_SLOT_ROOTCN;
@@ -73,13 +70,6 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
 
     //SLOT_DISPFRAME: See the next section for an explanation of this.
     //SLOT_ARGSPG: A page containing a list of command line arguments.
-
-
-
-
-//    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_SLOT_ALLOC0, NULL);
-//    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_SLOT_ALLOC1, NULL);
-//    err = cnode_create_foreign_l2(l1_cnode, ROOTCN_SLOT_SLOT_ALLOC2, NULL);
 
     //allocate memory for process
 //    struct cnoderef base_page_cn_ref;
@@ -118,9 +108,7 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
 
     struct capref l1_pt_parent;
     slot_alloc(&l1_pt_parent);
-    printf("AAAAAAAAA\n");
     vnode_create(l1_pt_parent, ObjType_VNode_ARM_l1);
-    printf("BBBBBBBBB\n");
     err = cap_copy(si->l1_pagetable, l1_pt_parent);
     if (err_is_fail(err)) {
 	    // Error
@@ -296,6 +284,7 @@ errval_t elf_alloc_func(void *state, genvaddr_t base, size_t size, uint32_t flag
     err = paging_map_fixed_attr(&(((struct spawninfo *)state)->ps), base, frame_ref, returned_bytes, flags);
     if (err_is_fail(err)) {
         debug_printf("Unable to map frame");
+	printf("this one\n");
         return err_push(err, LIB_ERR_PMAP_MAP);
     }
 
@@ -303,6 +292,7 @@ errval_t elf_alloc_func(void *state, genvaddr_t base, size_t size, uint32_t flag
     err = paging_map_frame(get_current_paging_state(), ret, returned_bytes, frame_ref, NULL, NULL);
     if (err_is_fail(err)) {
         debug_printf("Unable to map frame");
+	printf("that one\n");
         printf("err is %s\n", err_getstring(err));
         return err_push(err, LIB_ERR_PMAP_MAP);
     }

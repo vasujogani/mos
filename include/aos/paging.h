@@ -72,6 +72,8 @@ struct paging_state {
     struct l2_pt l2_pts[ARM_L1_MAX_ENTRIES];
     struct slab_allocator slabs;
     bool refillingslabs;
+    struct bitmap *bp;
+    lvaddr_t start_addr;
 };
 
 
@@ -131,6 +133,11 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
  */
 errval_t slab_refill_no_pagefault(struct slab_allocator *slabs,
                                   struct capref frame, size_t minbytes);
+
+
+errval_t paging_alloc_predefined_addr(struct paging_state *st,
+                                 size_t bytes, lvaddr_t vaddr);
+
 
 /**
  * \brief unmap a user provided frame
