@@ -50,6 +50,15 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si)
  
     lvaddr_t elf_addr;
     err = paging_map_frame(get_current_paging_state(), (void **)&elf_addr, frame_id.bytes, child_frame, NULL, NULL);
+
+    char *binary_start = (char *)elf_addr;
+    // printf("%c %c %c %c\n", *binary_start, *(binary_start + 1), *(binary_start + 2), *(binary_start + 3));
+    
+    assert(*binary_start == 0x7f);
+    assert(*(binary_start + 1) == 'E');
+    assert(*(binary_start + 2) == 'L');
+    assert(*(binary_start + 3) == 'F');
+
  
     // cspace
     struct cnoderef l1_cnode;
@@ -186,7 +195,8 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si)
     while (*it != 0) {
         if (*it == ' ') {
             params->argv[params->argc] = (void *)base_p + (param_last - bp);
-            *it = 1;
+            *it = 0;
+            it += 1; 
             param_last = it;
             params->argc += 1;
         }
