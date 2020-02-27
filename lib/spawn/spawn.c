@@ -199,6 +199,49 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
 
     // dispatcher done
 
+    const char* args = multiboot_module_opts(mem_region);
+    size_t region_size = ROUND_UP(sizeof(struct spawn_domain_params) + strlen(args) + 1, BASE_PAGE_SIZE);
+    struct capref mem_frame;
+    struct capref args_cap = {
+	    .cnode = si->l2_nodes[ROOTCN_SLOT_TASKCN],
+	    .slot = TASKCN_SLOT_ARGSPACE
+    };
+    void* args_addr;
+    size_t framesize;
+    frame_alloc(&mem_frame, region_size, &framesize);
+    paging_map_frame(get_current_paging_state(), &args_addr, framesize, mem_frame, NULL, NULL);
+
+    cap_copy(args_cap, mem_frame);
+    paging_map_framebase(&si->ps, &args_addr, framesize, mem_frame, NULL, NULL); 
+
+    struct spawn_domain_params* params = (struct spawn_domain_params*) args_addr;
+    // memset(&params->argv[0], 0, sizeof(params->argv));
+    // memset(&params->envp[0], 0, sizeof(params->envp));
+
+    char *pb = sizeof(struct spawn_domain_params) + (char *)params;
+    lvaddr_t spb = args_addr + sizeof(struct spawn_domain_params); 
+    strcpy(pb, args);
+    
+    size_t n = 0;
+    char* it = pb;
+    char *temp_pb = pb;
+    while (*it) {
+	    if (*it == ' ') {
+		params->argv[n] = (void*) spb + (temp_pb - pb);
+                *it = 0;
+		n += 1;
+		it += 1;
+            	temp_pb = it;	
+	    }
+	    it += 1;
+    }
+
+    params->argv[n] = (void *) spb + (temp_pf - pb);
+    params->argc = ++n;
+    si->enabled_area->named.r0 = (uint32_t) args_addr;
+
+    // set the rest to 0
+
     // setup env
     //
     // invoke_dispatcher()
