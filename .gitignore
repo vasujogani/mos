@@ -32,6 +32,7 @@ cscope.out
 
 # Builds
 build*/
+hake/
 
 # tup
 .tup
