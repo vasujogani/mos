@@ -17,6 +17,7 @@
 #include <aos/except.h>
 #include <aos/slab.h>
 #include "threads_priv.h"
+#include <mm/mm.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -65,22 +66,10 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
     st->v_space_list.size = size;
     st->v_space_list.v_region_nodetype = NodeType_Free;
     */
-    errval_t err;
-
-    slab_init(&st->slabs, sizeof(struct v_region_metadata), slab_default_refill);
-    st->refillingslabs = false; 
-
-    if (slab_freecount(&st->slabs) < 4 && !st->refillingslabs) {
-        st->refillingslabs = true;
-        err = st->slabs.refill_func(&st->slabs);
-        st->refillingslabs = false;
-        
-        if (err_is_fail(err)) {
-            debug_printf("paging_init_state: slab_refill failed\n");
-            return err;
-        }
-    }
-
+    // errval_t err;
+    slab_init(&(st->slabs), sizeof(struct v_region_metadata), slab_default_refill);
+    static char nodebuf[sizeof(struct v_region_metadata)*64];
+    slab_grow(&(st->slabs), nodebuf, sizeof(nodebuf));
     struct v_region_metadata *head = slab_alloc(&st->slabs);
     head->type = Nodetype_Free;
     head->base = start_vaddr;
@@ -156,7 +145,7 @@ errval_t paging_region_map(struct paging_region *pr, size_t req_size,
                            void **retbuf, size_t *ret_size)
 {
     lvaddr_t end_addr = pr->base_addr + pr->region_size;
-    ssize_t rem = end_addr - pr->current_addr;
+    size_t rem = end_addr - pr->current_addr;
     if (rem > req_size) {
         // ok
         *retbuf = (void*)pr->current_addr;
@@ -197,7 +186,9 @@ errval_t paging_region_unmap(struct paging_region *pr, lvaddr_t base, size_t byt
 errval_t paging_alloc(struct paging_state *st, void **buf, size_t bytes)
 {
     struct v_region_metadata *node = st->v_space_list; 
-    assert(bytes % BASE_PAGE_SIZE == 0);
+    if (bytes % BASE_PAGE_SIZE != 0) {
+        bytes += BASE_PAGE_SIZE - (bytes % BASE_PAGE_SIZE);
+    }
 
     struct v_region_metadata *prev = NULL;
 

@@ -243,14 +243,14 @@ void test5(void) {
     void *buf;
     struct capref frame_ref;
     size_t returned_bytes;
-    err = frame_alloc(&frame_ref, BASE_PAGE_SIZE * 16, &returned_bytes);
+    err = frame_alloc(&frame_ref, BASE_PAGE_SIZE * 260, &returned_bytes);
     err = paging_map_frame(get_current_paging_state(), (void *)&buf,
                                returned_bytes, frame_ref,
                                 NULL, NULL);
     char *start = (char *)buf;
-    for (int i = 0; i < BASE_PAGE_SIZE * 16; i++) {
-        *(start + i) = 'B';
-        printf("On iteration %i, value of address is %c\n", i, *(start + i));    
+    for (int i = 0; i < 260; i++) {
+        *(start + (BASE_PAGE_SIZE * i)) = 'B';
+        printf("On iteration %i, value of address is %c\n", i, *(start + (BASE_PAGE_SIZE * i)));    
     }
     debug_printf("****Done with Test 5\n");
 }
