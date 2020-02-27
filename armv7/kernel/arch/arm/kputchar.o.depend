@@ -1,0 +1,14 @@
+armv7/kernel/arch/arm/kputchar.o armv7/kernel/arch/arm/kputchar.o.depend: \
+ /u/rv22698/Documents/Multicore/p2_code/kernel/arch/arm/kputchar.c \
+ /u/rv22698/Documents/Multicore/p2_code/include/deputy/nodeputy.h \
+ /u/rv22698/Documents/Multicore/p2_code/kernel/include/serial.h \
+ armv7/include/errors/errno.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/stdint.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/machine/_default_types.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/features.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/_intsup.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/_stdint.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/c/stdbool.h \
+ /u/rv22698/Documents/Multicore/p2_code/kernel/include/kputchar.h \
+ /u/rv22698/Documents/Multicore/p2_code/kernel/include/arch/armv7/global.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/arch/arm/barrelfish_kpi/spinlocks_arch.h
