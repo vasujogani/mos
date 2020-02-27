@@ -109,7 +109,7 @@ errval_t initialize_ram_alloc(void)
     // test2();
     // test3();
     // test4();
-    test5();
+    // test5();
 
     return SYS_ERR_OK;
 }

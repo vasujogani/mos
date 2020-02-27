@@ -117,6 +117,7 @@ void *slab_alloc(struct slab_allocator *slabs)
     assert(bh != NULL);
     sh->blocks = bh->next;
     sh->free--;
+    printf("Num free is now %d\n", sh->free);
 
     return bh;
 }
