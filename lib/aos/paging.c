@@ -65,13 +65,26 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
     st->v_space_list.size = size;
     st->v_space_list.v_region_nodetype = NodeType_Free;
     */
+    errval_t err;
+
     slab_init(&st->slabs, sizeof(struct v_region_metadata), slab_default_refill);
+    st->refillingslabs = false; 
+
+    if (slab_freecount(&st->slabs) < 4 && !st->refillingslabs) {
+        st->refillingslabs = true;
+        err = st->slabs.refill_func(&st->slabs);
+        st->refillingslabs = false;
+        
+        if (err_is_fail(err)) {
+            debug_printf("paging_init_state: slab_refill failed\n");
+            return err;
+        }
+    }
+
     struct v_region_metadata *head = slab_alloc(&st->slabs);
     head->type = Nodetype_Free;
     head->base = start_vaddr;
-    // TODO (M2):
-    // get addresses from the lecture slides
-    // head->size = max_vaddr - start_vaddr;
+    head->size = 0x8000000 - start_vaddr;
     head->next = NULL;
     st->v_space_list = head;
     return SYS_ERR_OK;
@@ -176,32 +189,39 @@ errval_t paging_region_unmap(struct paging_region *pr, lvaddr_t base, size_t byt
 }
 
 /**
-<<<<<<< HEAD
  *
-=======
  * TODO(M2): Implement this function
->>>>>>> 20d68a2be105e2405b60d5354556aa090bdbab49
  * \brief Find a bit of free virtual address space that is large enough to
  *        accomodate a buffer of size `bytes`.
  */
 errval_t paging_alloc(struct paging_state *st, void **buf, size_t bytes)
 {
     struct v_region_metadata *node = st->v_space_list; 
+    assert(bytes % BASE_PAGE_SIZE == 0);
+
+    struct v_region_metadata *prev = NULL;
+
     while (node) {
         if (node->type == Nodetype_Free && node->size >= bytes) {
             *buf = (void*) node->base;
-            // TODO(M2): Should rounding be moved outside of the loop?
-            node->base += bytes + (BASE_PAGE_SIZE - bytes % BASE_PAGE_SIZE);
-            node->size -= (bytes + (BASE_PAGE_SIZE - bytes % BASE_PAGE_SIZE));
+            node->base += bytes; 
+            node->size -= bytes;
+            if (node->size == 0) {
+                // Corner case: head needs to be deleted
+                if (node == st->v_space_list) {
+                    st->v_space_list = node->next;
+                }
+                else {
+                    prev->next = node->next;
+                }
+                slab_free(&st->slabs, node);
+            }
             return SYS_ERR_OK;
         }
         node = node->next;
     }
     *buf = NULL;
-    // TODO(M2): Is this correct? Or should we return something indicating an error - no more
-    // free space in the virtual address space?
-    // probably should be an error - but which macro?
-    return SYS_ERR_OK;
+    return LIB_ERR_OUT_OF_VIRTUAL_ADDR;
 }
 
 /**
@@ -238,9 +258,7 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
     // TODO(M2): Should we get rid of this? probably won't do anything - will already be aligned
     // if they went through paging_alloc. Don't go through - their problem. 
     // align the vaddr
-    if (vaddr % BASE_PAGE_SIZE != 0) {
-        vaddr -= vaddr % BASE_PAGE_SIZE;
-    }
+    assert(vaddr % BASE_PAGE_SIZE == 0);
     
     errval_t err;
 
@@ -257,6 +275,18 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
 
     // TODO(M2): Create a node to keep track of allocated space
     // Should this be here, or in paging_alloc?
+    // probably doesn't make a difference
+    if (slab_freecount(&st->slabs) < 4 && !st->refillingslabs) {
+        st->refillingslabs = true;
+        err = st->slabs.refill_func(&st->slabs);
+        st->refillingslabs = false;
+        
+        if (err_is_fail(err)) {
+            debug_printf("paging_map_fixed_attr: slab_refill failed\n");
+            return err;
+        }
+    }
+
     struct v_region_metadata *allocated = slab_alloc(&st->slabs);
     allocated->type = Nodetype_Allocated;
     allocated->base = vaddr;
@@ -266,27 +296,17 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
 
     // Use 1 list - make coalescing easier 
     struct v_region_metadata *node = st->v_space_list;
-    while (node->next && node->base < vaddr) {
-        node = node->next;
-    }
-    allocated->next = node->next;
-    node->next = allocated;
-  
-    /* 
-    // or use 2 lists - fewer checks when allocating 
-    if (st->allocated_list) {
-        // insert, sorted by address
-        struct v_region_metadata *current = st->allocated_list;
-        while (current->next && current->base < vaddr) {
-            current = current->next;
-        }
-        allocated->next = current->next;
-        current->next = allocated;
+    if (node->base > vaddr) {
+        allocated->next = node;
+        st->v_space_list = allocated;
     }
     else {
-        st->allocated_list = allocated;
+        while (node->next && node->next->base < vaddr) {
+            node = node->next;
+        }
+        allocated->next = node->next;
+        node->next = allocated;
     }
-    */
 
     while ( pte_count > 0 )
     {
@@ -321,14 +341,6 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
             st->l2_pts[ARM_L1_OFFSET(vaddr)].cap = l2;
         }
    
-        // need to determine the pte_count based on the size of the frame
-        // also, what do you pass for the offset? 
-        // struct frame_identity fi;
-        // err = frame_identify(frame, &fi);
-        // if (err_is_fail(err)) {
-        //     debug_printf("frame_identify failed: %s\n", err_getstring(err));
-        // } 
-        
         // determine pte_count based on size of frame
         // call slot_alloc to get a capref for mapping ???
         struct capref mapping;
@@ -344,17 +356,35 @@ errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
         
         if (remaining_ptes < pte_count) {
             err = vnode_map(l2, frame, ARM_L2_OFFSET(vaddr), flags, frame_offset, remaining_ptes, mapping);
+            if (err_is_fail(err)) {
+                debug_printf("vnode_map failed: %s\n", err_getstring(err));
+                return err;
+            }
             pte_count -= remaining_ptes;
             vaddr += remaining_ptes * BASE_PAGE_SIZE;
             frame_offset += remaining_ptes * BASE_PAGE_SIZE;
+
+            struct capref copy;
+            err = st->slot_alloc->alloc(st->slot_alloc, &copy);
+            if (err_is_fail(err)) {
+                debug_printf("slot_alloc failed: %s\n", err_getstring(err));
+                return err;
+            }
+    
+            err = cap_copy(copy, frame);
+            if (err_is_fail(err)) {
+                debug_printf("cap_copy failed: %s\n", err_getstring(err));
+                return err;
+            }
+            frame = copy;
         } 
         else {
             err = vnode_map(l2, frame, ARM_L2_OFFSET(vaddr), flags, frame_offset, pte_count, mapping);
+            if (err_is_fail(err)) {
+                debug_printf("vnode_map failed: %s\n", err_getstring(err));
+                return err;
+            }
             pte_count = 0;
-        }
-        if (err_is_fail(err)) {
-            debug_printf("vnode_map failed: %s\n", err_getstring(err));
-            return err;
         }
     }
     return SYS_ERR_OK;

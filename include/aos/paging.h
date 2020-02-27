@@ -71,6 +71,7 @@ struct paging_state {
     struct capref l1_pt;
     struct l2_pt l2_pts[ARM_L1_MAX_ENTRIES];
     struct slab_allocator slabs;
+    bool refillingslabs;
 };
 
 

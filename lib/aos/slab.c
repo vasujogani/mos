@@ -192,13 +192,16 @@ static errval_t slab_refill_pages(struct slab_allocator *slabs, size_t bytes)
     if (err_is_fail(err)) {
         return err;
     }
-    err = paging_map_fixed_attr(get_current_paging_state(), faddr, frame, fsize, VREGION_FLAGS_READ_WRITE);
+    // TODO(M2): change to call frame_attr
+    // err = paging_map_fixed_attr(get_current_paging_state(), faddr, frame, fsize, VREGION_FLAGS_READ_WRITE);
+    void *buf;
+    err = paging_map_frame_attr(get_current_paging_state(), &buf, fsize, frame, VREGION_FLAGS_READ_WRITE, NULL, NULL);
     if (err_is_fail(err)) {
         return err;
     }
     
-    slab_grow(slabs, (void *)(faddr), bytes);
-    faddr +=  fsize;
+    slab_grow(slabs, buf, bytes);
+    // faddr +=  fsize;
 
     return SYS_ERR_OK;
 }
