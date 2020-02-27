@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
 
     // struct spawninfo si;
     spawn_load_by_name("hello", (struct spawninfo *) malloc(sizeof(struct spawninfo)));
+    spawn_load_by_name("hello", (struct spawninfo *) malloc(sizeof(struct spawninfo)));
 
     debug_printf("Message handler loop\n");
     // Hang around

@@ -1,8 +1,12 @@
+
+ 
+ 
+ 
 /**
  * \file
  * \brief Barrelfish paging helpers.
  */
-
+ 
 /*
  * Copyright (c) 2012, ETH Zurich.
  * All rights reserved.
@@ -11,22 +15,22 @@
  * If you do not find this file, copies can be found by writing to:
  * ETH Zurich D-INFK, Haldeneggsteig 4, CH-8092 Zurich. Attn: Systems Group.
  */
-
-
+ 
+ 
 #ifndef LIBBARRELFISH_PAGING_H
 #define LIBBARRELFISH_PAGING_H
-
+ 
 #include <errors/errno.h>
 #include <aos/capabilities.h>
 #include <aos/slab.h>
 #include <barrelfish_kpi/paging_arm_v7.h>
-
+ 
 typedef int paging_flags_t;
-
+ 
 #define VADDR_OFFSET ((lvaddr_t)1UL*1024*1024*1024) // 1GB
-
+ 
 #define PAGING_SLAB_BUFSIZE 12
-
+ 
 #define VREGION_FLAGS_READ     0x01 // Reading allowed
 #define VREGION_FLAGS_WRITE    0x02 // Writing allowed
 #define VREGION_FLAGS_EXECUTE  0x04 // Execute allowed
@@ -34,7 +38,7 @@ typedef int paging_flags_t;
 #define VREGION_FLAGS_MPB      0x10 // Message passing buffer
 #define VREGION_FLAGS_GUARD    0x20 // Guard page
 #define VREGION_FLAGS_MASK     0x2f // Mask of all individual VREGION_FLAGS
-
+ 
 #define VREGION_FLAGS_READ_WRITE \
     (VREGION_FLAGS_READ | VREGION_FLAGS_WRITE)
 #define VREGION_FLAGS_READ_EXECUTE \
@@ -43,40 +47,35 @@ typedef int paging_flags_t;
     (VREGION_FLAGS_READ | VREGION_FLAGS_WRITE | VREGION_FLAGS_NOCACHE)
 #define VREGION_FLAGS_READ_WRITE_MPB \
     (VREGION_FLAGS_READ | VREGION_FLAGS_WRITE | VREGION_FLAGS_MPB)
+ 
 
-struct l2_pt {
-    struct capref cap;
-    bool initialized;
-};
-
-enum v_region_nodetype {
-    Nodetype_Free,
-    Nodetype_Allocated
-};
-
-// v_region_node
-struct v_region_metadata {
-    enum v_region_nodetype type;
-    lvaddr_t base;
+struct paging_frame_node {
+    lvaddr_t base_addr;
     size_t size;
-    struct v_region_metadata *next;
+    struct paging_frame_node* next;
 };
-
-// struct to store the paging status of a process
+ 
+struct paging_allocated_node {
+    lvaddr_t addr;
+    size_t size;
+    struct paging_allocated_node* next;
+};
+ 
 struct paging_state {
     struct slot_allocator* slot_alloc;
-    struct v_region_metadata *v_space_list;
-    // struct v_region_metadata *allocated_list;
-    // TODO: add struct members to keep track of the page tables etc
-    struct capref l1_pt;
-    struct l2_pt l2_pts[ARM_L1_MAX_ENTRIES];
-    struct slab_allocator slabs;
-    bool refillingslabs;
-    struct bitmap *bp;
-    lvaddr_t start_addr;
+    struct slab_allocator slab_alloc;
+    
+    struct paging_frame_node free_node;
+    struct paging_allocated_node *used_node_list;
+    struct capref l1_page_table;
+    
+    struct l2_page_table{
+        struct capref cap;
+        bool init;
+    } l2_page_tables[ARM_L1_MAX_ENTRIES];
 };
-
-
+ 
+ 
 struct thread;
 /// Initialize paging_state struct
 errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
@@ -85,17 +84,20 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
 errval_t paging_init(void);
 /// setup paging on new thread (used for user-level threads)
 void paging_init_onthread(struct thread *t);
-
+ 
+ 
 struct paging_region {
     lvaddr_t base_addr;
     lvaddr_t current_addr;
     size_t region_size;
+    struct slab_allocator *slab_alloc;
     // TODO: if needed add struct members for tracking state
+    struct paging_frame_node* holes;
 };
-
+ 
 errval_t paging_region_init(struct paging_state *st,
                             struct paging_region *pr, size_t size);
-
+ 
 /**
  * \brief return a pointer to a bit of the paging region `pr`.
  * This function gets used in some of the code that is responsible
@@ -110,13 +112,13 @@ errval_t paging_region_map(struct paging_region *pr, size_t req_size,
  * We ignore unmap requests right now.
  */
 errval_t paging_region_unmap(struct paging_region *pr, lvaddr_t base, size_t bytes);
-
+ 
 /**
  * \brief Find a bit of free virtual address space that is large enough to
  *        accomodate a buffer of size `bytes`.
  */
 errval_t paging_alloc(struct paging_state *st, void **buf, size_t bytes);
-
+ 
 /**
  * Functions to map a user provided frame.
  */
@@ -127,37 +129,30 @@ errval_t paging_map_frame_attr(struct paging_state *st, void **buf,
 /// Map user provided frame at user provided VA with given flags.
 errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
                                struct capref frame, size_t bytes, int flags);
-
+ 
 /**
  * refill slab allocator without causing a page fault
  */
 errval_t slab_refill_no_pagefault(struct slab_allocator *slabs,
                                   struct capref frame, size_t minbytes);
-
-
-errval_t paging_alloc_predefined_addr(struct paging_state *st,
-                                 size_t bytes, lvaddr_t vaddr);
-
-
+ 
 /**
- * \brief unmap a user provided frame
+ * \brief unmap region starting at address `region`.
  * NOTE: this function is currently here to make libbarrelfish compile. As
  * noted on paging_region_unmap we ignore unmap requests right now.
  */
 errval_t paging_unmap(struct paging_state *st, const void *region);
-
-
+ 
+ 
 /// Map user provided frame while allocating VA space for it
 static inline errval_t paging_map_frame(struct paging_state *st, void **buf,
                                         size_t bytes, struct capref frame,
                                         void *arg1, void *arg2)
 {
-    errval_t err  = paging_map_frame_attr(st, buf, bytes, frame,
+    return paging_map_frame_attr(st, buf, bytes, frame,
             VREGION_FLAGS_READ_WRITE, arg1, arg2);
-            printf("------------updated\n");
-    return err;            
 }
-
+ 
 /// Map user provided frame at user provided VA.
 static inline errval_t paging_map_fixed(struct paging_state *st, lvaddr_t vaddr,
                                         struct capref frame, size_t bytes)
@@ -165,10 +160,9 @@ static inline errval_t paging_map_fixed(struct paging_state *st, lvaddr_t vaddr,
     return paging_map_fixed_attr(st, vaddr, frame, bytes,
             VREGION_FLAGS_READ_WRITE);
 }
-
+ 
 static inline lvaddr_t paging_genvaddr_to_lvaddr(genvaddr_t genvaddr) {
     return (lvaddr_t) genvaddr;
 }
-
-void ps_print(struct paging_state *st);
+ 
 #endif // LIBBARRELFISH_PAGING_H

@@ -1,8 +1,10 @@
+
+ 
 /**
  * \file
  * \brief create child process library
  */
-
+ 
 /*
  * Copyright (c) 2016, ETH Zurich.
  * All rights reserved.
@@ -11,32 +13,29 @@
  * If you do not find this file, copies can be found by writing to:
  * ETH Zurich D-INFK, Universitaetsstrasse 6, CH-8092 Zurich. Attn: Systems Group.
  */
-
+ 
 #ifndef _INIT_SPAWN_H_
 #define _INIT_SPAWN_H_
-
+ 
 #include "aos/slot_alloc.h"
 #include "aos/paging.h"
-
+ 
+/// Information about the binary.
 struct spawninfo {
-
-    // Information about the binary
-    char * binary_name;     // Name of the binary
-    struct capref l1_cnode; // pointer to process L1 CNODE
-    struct capref l1_pagetable;
-    struct paging_state ps;
-    struct cnoderef l2_cnodes[ROOTCN_FREE_SLOTS]; // array
-    genvaddr_t entry_addr; 
-    genvaddr_t got;
-    struct capref dispatcher;
-    arch_registers_state_t *enabled_area;
-
-    // TODO: Use this structure to keep track
-    // of information you need for building/starting
-    // your new process!
+    char * binary_name;                 
+    struct capref l1_cnode;             
+    struct cnoderef l2_cnodes[ROOTCN_SLOTS_USER];   
+    struct capref dispatcher;           
+    struct capref l1_pt;        
+    struct capref dis_frame;
+    struct paging_state ps;   
+    genvaddr_t got;                   
+    genvaddr_t entry_addr;              
 };
-
-// Start a child process by binary name. Fills in si
+ 
+/// Start a child process by binary name. This fills in the spawninfo.
 errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si);
-
+ 
 #endif /* _INIT_SPAWN_H_ */
+ 
+ 
