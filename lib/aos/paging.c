@@ -215,6 +215,7 @@ errval_t paging_alloc(struct paging_state *st, void **buf, size_t bytes)
         node = node->next;
     }
     *buf = NULL;
+    printf("Getting here, shouldnt\n");
     return LIB_ERR_OUT_OF_VIRTUAL_ADDR;
 }
 

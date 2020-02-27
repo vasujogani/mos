@@ -282,14 +282,19 @@ errval_t elf_alloc_func(void *state, genvaddr_t base, size_t size, uint32_t flag
         debug_printf("Unable to create frame");
         return err_push(err, LIB_ERR_FRAME_CREATE);
     }
+    printf("For child\n");
     err = paging_map_fixed_attr(&(((struct spawninfo *)state)->ps), base, frame_ref, size, flags);
     if (err_is_fail(err)) {
         debug_printf("Unable to map frame");
         return err_push(err, LIB_ERR_PMAP_MAP);
     }
+
+    printf("For parent\n");
+    printf("Size is %zu\n", size);
     err = paging_map_frame_attr(get_current_paging_state(), ret, size, frame_ref, flags, NULL, NULL);
     if (err_is_fail(err)) {
         debug_printf("Unable to map frame");
+        printf("err is %s\n", err_getstring(err));
         return err_push(err, LIB_ERR_PMAP_MAP);
     }
     return SYS_ERR_OK;
