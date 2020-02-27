@@ -240,15 +240,16 @@ void test5(void) {
     // test4 alloc + free
     debug_printf("****Start Test 5 ====== larger frame allocation\n");
     errval_t err;
-    void *buf;
-    struct capref frame_ref;
-    size_t returned_bytes;
-    err = frame_alloc(&frame_ref, BASE_PAGE_SIZE * 260, &returned_bytes);
-    err = paging_map_frame(get_current_paging_state(), (void *)&buf,
-                               returned_bytes, frame_ref,
-                                NULL, NULL);
-    char *start = (char *)buf;
     for (int i = 0; i < 260; i++) {
+        void *buf;
+        struct capref frame_ref;
+        size_t returned_bytes;
+        err = frame_alloc(&frame_ref, BASE_PAGE_SIZE * 260, &returned_bytes);
+        printf("alloc done\n");
+        err = paging_map_frame(get_current_paging_state(), (void *)&buf,
+                                returned_bytes, frame_ref,
+                                    NULL, NULL);
+        char *start = (char *)buf;
         *(start + (BASE_PAGE_SIZE * i)) = 'B';
         printf("On iteration %i, value of address is %c\n", i, *(start + (BASE_PAGE_SIZE * i)));    
     }

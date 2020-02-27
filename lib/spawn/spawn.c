@@ -16,7 +16,7 @@ errval_t spawn_setup_dispatcher(struct spawninfo * si);
 // TODO(M2): Implement this function such that it starts a new process
 // TODO(M4): Build and pass a messaging channel to your child process
 errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
-    printf("spawn start_child: starting: %s\n", binary_name);
+    printf("*spawn start_child: starting: %s\n", binary_name);
 
    errval_t err;
 
@@ -33,13 +33,15 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
     struct frame_identity frame;
     frame_identify(child_frame_cap, &frame);
     lvaddr_t elf_addr;
-    paging_map_frame(get_current_paging_state(), (void *)&elf_addr, frame.bytes, child_frame_cap, NULL, NULL);
+    err = paging_map_frame(get_current_paging_state(), (void *)&elf_addr, frame.bytes, child_frame_cap, NULL, NULL);
+    printf("*********************************MADE IT THIS FAR %s\n", err_getstring(err));
     // verify
     char *binary_start = (char *)elf_addr;
     assert(*binary_start == 0x7f);
     assert(*(binary_start + 1) == 'E');
     assert(*(binary_start + 2) == 'L');
     assert(*(binary_start + 3) == 'F');
+
 
     // - Setup childs cspace
     struct cnoderef l1_cnode_ref;
@@ -65,7 +67,7 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
     if (err_is_fail(err)) {
         return err_push(err, LIB_ERR_CNODE_CREATE_FROM_MEM);
     }
-        printf("HERE1\n");
+        printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@HERE1\n");
 
 
     //SLOT_DISPFRAME: See the next section for an explanation of this.
@@ -95,6 +97,7 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si) {
         cap_destroy(temp_cap);
 
     }
+        printf("errrrrrrrrrrrrrrrrrrrrrrrrrr: \n");
 
 
     
@@ -129,7 +132,6 @@ printf("***************%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%******************\n"
     err = elf_load(EM_ARM, elf_alloc_func, (void *)si, elf_addr, frame.bytes, &(si->entry_addr));
     printf("******************************** %x, %x*\n", elf_addr, frame.bytes);
     printf("%s\n", err_getstring(err));
-    ps_print(get_current_paging_state());
     
     struct Elf32_Shdr *got = elf32_find_section_header_name(elf_addr, frame.bytes, ".got");
     si->got = got->sh_addr;
@@ -206,7 +208,6 @@ printf("***************%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%******************\n"
 
     si->enabled_area = enabled_area;
 
-    printf("HERE\n");
 
 
     // dispatcher done
@@ -215,8 +216,8 @@ printf("***************%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%******************\n"
     size_t region_size = ROUND_UP(sizeof(struct spawn_domain_params) + strlen(args) + 1, BASE_PAGE_SIZE);
     struct capref mem_frame;
     struct capref args_cap = {
-	    .cnode = si->l2_nodes[ROOTCN_SLOT_TASKCN],
-	    .slot = TASKCN_SLOT_ARGSPACE
+	    .cnode = si->l2_cnodes[ROOTCN_SLOT_TASKCN],
+	    .slot = TASKCN_SLOT_ARGSPAGE
     };
     void* args_addr;
     size_t framesize;
@@ -224,14 +225,14 @@ printf("***************%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%******************\n"
     paging_map_frame(get_current_paging_state(), &args_addr, framesize, mem_frame, NULL, NULL);
 
     cap_copy(args_cap, mem_frame);
-    paging_map_framebase(&si->ps, &args_addr, framesize, mem_frame, NULL, NULL); 
+    paging_map_frame(&si->ps, &args_addr, framesize, mem_frame, NULL, NULL); 
 
     struct spawn_domain_params* params = (struct spawn_domain_params*) args_addr;
     // memset(&params->argv[0], 0, sizeof(params->argv));
     // memset(&params->envp[0], 0, sizeof(params->envp));
 
     char *pb = sizeof(struct spawn_domain_params) + (char *)params;
-    lvaddr_t spb = args_addr + sizeof(struct spawn_domain_params); 
+    lvaddr_t spb = (lvaddr_t)args_addr + sizeof(struct spawn_domain_params); 
     strcpy(pb, args);
     
     size_t n = 0;
@@ -248,7 +249,7 @@ printf("***************%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%******************\n"
 	    it += 1;
     }
 
-    params->argv[n] = (void *) spb + (temp_pf - pb);
+    params->argv[n] = (void *) spb + (temp_pb - pb);
     params->argc = ++n;
     si->enabled_area->named.r0 = (uint32_t) args_addr;
 

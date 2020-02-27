@@ -39,23 +39,21 @@ const char *multiboot_module_rawstring(struct mem_region *region)
             .cnode = cnode_module,
             .slot = 0
         };
-        printf("Before\n");
         err = paging_map_frame_attr(get_current_paging_state(),
             (void **)&multiboot_strings, BASE_PAGE_SIZE, mmstrings_cap,
             VREGION_FLAGS_READ, NULL, NULL);
-        printf("After\n");
         if (err_is_fail(err)) {
             DEBUG_ERR(err, "vspace_map failed");
 	        return NULL;
         }
-// #if 0
+#if 0
         printf("Mapped multiboot_strings at %p\n", multiboot_strings);
         for (int i = 0; i < 256; i++) {
             if ((i & 15) == 0) printf("%04x  ", i);
             printf ("%02x ", multiboot_strings[i]& 0xff);
             if ((i & 15) == 15) printf("\n");
         }
-// #endif
+#endif
     }
 
     if (region == NULL || region->mr_type != RegionType_Module) {
@@ -89,12 +87,9 @@ const char *multiboot_module_name(struct mem_region *region)
 
 struct mem_region *multiboot_find_module(struct bootinfo *bi, const char *name)
 {
-    printf("HEREE\n");
     for(size_t i = 0; i < bi->regions_length; i++) {
         struct mem_region *region = &bi->regions[i];
-        printf("here\n");
         const char *modname = multiboot_module_name(region);
-        printf("name is %s\n", modname);
         if (modname != NULL &&
             strncmp(modname + strlen(modname) - strlen(name),
                     name, strlen(name)) == 0) {

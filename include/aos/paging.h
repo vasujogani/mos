@@ -152,8 +152,10 @@ static inline errval_t paging_map_frame(struct paging_state *st, void **buf,
                                         size_t bytes, struct capref frame,
                                         void *arg1, void *arg2)
 {
-    return paging_map_frame_attr(st, buf, bytes, frame,
+    errval_t err  = paging_map_frame_attr(st, buf, bytes, frame,
             VREGION_FLAGS_READ_WRITE, arg1, arg2);
+            printf("------------updated\n");
+    return err;            
 }
 
 /// Map user provided frame at user provided VA.
