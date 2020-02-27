@@ -19,6 +19,7 @@
 #include <aos/waitset.h>
 #include <aos/morecore.h>
 #include <aos/paging.h>
+#include <spawn/spawn.h>
 
 #include <mm/mm.h>
 #include "mem_alloc.h"
@@ -51,6 +52,9 @@ int main(int argc, char *argv[])
     if(err_is_fail(err)){
         DEBUG_ERR(err, "initialize_ram_alloc");
     }
+
+    // struct spawninfo si;
+    spawn_load_by_name("hello", (struct spawninfo *) malloc(sizeof(struct spawninfo)));
 
     debug_printf("Message handler loop\n");
     // Hang around
