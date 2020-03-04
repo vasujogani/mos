@@ -60,13 +60,10 @@ struct mm {
     void *slot_alloc_inst;       ///< Opaque instance pointer for slot allocator
     enum objtype objtype;        ///< Type of capabilities stored
     struct mmnode *head;         ///< Head of doubly-linked list of nodes in order
-<<<<<<< HEAD
-=======
     genpaddr_t initial_base;
     size_t initial_size;
     struct capref initial_cap;
     bool refillingslabs;
->>>>>>> week3
 };
 
 errval_t mm_init(struct mm *mm, enum objtype objtype,
@@ -80,12 +77,8 @@ errval_t mm_alloc_aligned(struct mm *mm, size_t size, size_t alignment,
 errval_t mm_alloc(struct mm *mm, size_t size, struct capref *retcap);
 errval_t mm_free(struct mm *mm, struct capref cap, genpaddr_t base, gensize_t size);
 void mm_dump_mmnodes(struct mm *mm);
-<<<<<<< HEAD
-void mm_destroy(struct mm *mm);
-=======
 errval_t mm_destroy(struct mm *mm);
 void mm_print(struct mm *mm);
->>>>>>> week3
 
 __END_DECLS
 

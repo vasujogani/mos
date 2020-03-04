@@ -175,7 +175,6 @@ struct slot_alloc_state *get_slot_alloc_state(void)
     struct dispatcher_generic* disp = get_dispatcher_generic(handle);
     return &disp->core_state.c.slot_alloc_state;
 }
-<<<<<<< HEAD
 
 /**
  * \brief Set the init rpc channel on the domain state
@@ -195,5 +194,3 @@ struct aos_rpc *get_init_rpc(void)
     struct dispatcher_generic* disp = get_dispatcher_generic(handle);
     return disp->core_state.c.init_rpc;
 }
-=======
->>>>>>> week3

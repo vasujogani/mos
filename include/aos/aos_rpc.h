@@ -88,12 +88,8 @@ errval_t aos_rpc_get_device_cap(struct aos_rpc *rpc, lpaddr_t paddr, size_t byte
                                 struct capref *frame);
 /**
  * \brief Initialize given rpc channel.
-<<<<<<< HEAD
  * TODO: you may want to change the inteface of your init function, depending
  * on how you design your message passing code.
-=======
- * TODO: you may want to change the inteface of your init function
->>>>>>> week3
  */
 errval_t aos_rpc_init(struct aos_rpc *rpc);
 
