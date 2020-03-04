@@ -1,8 +1,19 @@
+<<<<<<< HEAD
+=======
+
+ 
+ 
+ 
+>>>>>>> week3
 /**
  * \file
  * \brief Barrelfish paging helpers.
  */
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> week3
 /*
  * Copyright (c) 2012, ETH Zurich.
  * All rights reserved.
@@ -11,15 +22,24 @@
  * If you do not find this file, copies can be found by writing to:
  * ETH Zurich D-INFK, Haldeneggsteig 4, CH-8092 Zurich. Attn: Systems Group.
  */
+<<<<<<< HEAD
 
 
 #ifndef LIBBARRELFISH_PAGING_H
 #define LIBBARRELFISH_PAGING_H
 
+=======
+ 
+ 
+#ifndef LIBBARRELFISH_PAGING_H
+#define LIBBARRELFISH_PAGING_H
+ 
+>>>>>>> week3
 #include <errors/errno.h>
 #include <aos/capabilities.h>
 #include <aos/slab.h>
 #include <barrelfish_kpi/paging_arm_v7.h>
+<<<<<<< HEAD
 
 typedef int paging_flags_t;
 
@@ -27,6 +47,15 @@ typedef int paging_flags_t;
 
 #define PAGING_SLAB_BUFSIZE 12
 
+=======
+ 
+typedef int paging_flags_t;
+ 
+#define VADDR_OFFSET ((lvaddr_t)1UL*1024*1024*1024) // 1GB
+ 
+#define PAGING_SLAB_BUFSIZE 12
+ 
+>>>>>>> week3
 #define VREGION_FLAGS_READ     0x01 // Reading allowed
 #define VREGION_FLAGS_WRITE    0x02 // Writing allowed
 #define VREGION_FLAGS_EXECUTE  0x04 // Execute allowed
@@ -34,7 +63,11 @@ typedef int paging_flags_t;
 #define VREGION_FLAGS_MPB      0x10 // Message passing buffer
 #define VREGION_FLAGS_GUARD    0x20 // Guard page
 #define VREGION_FLAGS_MASK     0x2f // Mask of all individual VREGION_FLAGS
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> week3
 #define VREGION_FLAGS_READ_WRITE \
     (VREGION_FLAGS_READ | VREGION_FLAGS_WRITE)
 #define VREGION_FLAGS_READ_EXECUTE \
@@ -43,6 +76,7 @@ typedef int paging_flags_t;
     (VREGION_FLAGS_READ | VREGION_FLAGS_WRITE | VREGION_FLAGS_NOCACHE)
 #define VREGION_FLAGS_READ_WRITE_MPB \
     (VREGION_FLAGS_READ | VREGION_FLAGS_WRITE | VREGION_FLAGS_MPB)
+<<<<<<< HEAD
 
 // struct to store the paging status of a process
 struct paging_state {
@@ -51,6 +85,37 @@ struct paging_state {
 };
 
 
+=======
+ 
+
+struct paging_frame_node {
+    lvaddr_t base_addr;
+    size_t size;
+    struct paging_frame_node* next;
+};
+ 
+struct paging_allocated_node {
+    lvaddr_t addr;
+    size_t size;
+    struct paging_allocated_node* next;
+};
+ 
+struct paging_state {
+    struct slot_allocator* slot_alloc;
+    struct slab_allocator slab_alloc;
+    
+    struct paging_frame_node free_node;
+    struct paging_allocated_node *used_node_list;
+    struct capref l1_page_table;
+    
+    struct l2_page_table{
+        struct capref cap;
+        bool init;
+    } l2_page_tables[ARM_L1_MAX_ENTRIES];
+};
+ 
+ 
+>>>>>>> week3
 struct thread;
 /// Initialize paging_state struct
 errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
@@ -59,17 +124,33 @@ errval_t paging_init_state(struct paging_state *st, lvaddr_t start_vaddr,
 errval_t paging_init(void);
 /// setup paging on new thread (used for user-level threads)
 void paging_init_onthread(struct thread *t);
+<<<<<<< HEAD
 
+=======
+ 
+ 
+>>>>>>> week3
 struct paging_region {
     lvaddr_t base_addr;
     lvaddr_t current_addr;
     size_t region_size;
+<<<<<<< HEAD
     // TODO: if needed add struct members for tracking state
 };
 
 errval_t paging_region_init(struct paging_state *st,
                             struct paging_region *pr, size_t size);
 
+=======
+    struct slab_allocator *slab_alloc;
+    // TODO: if needed add struct members for tracking state
+    struct paging_frame_node* holes;
+};
+ 
+errval_t paging_region_init(struct paging_state *st,
+                            struct paging_region *pr, size_t size);
+ 
+>>>>>>> week3
 /**
  * \brief return a pointer to a bit of the paging region `pr`.
  * This function gets used in some of the code that is responsible
@@ -84,13 +165,21 @@ errval_t paging_region_map(struct paging_region *pr, size_t req_size,
  * We ignore unmap requests right now.
  */
 errval_t paging_region_unmap(struct paging_region *pr, lvaddr_t base, size_t bytes);
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> week3
 /**
  * \brief Find a bit of free virtual address space that is large enough to
  *        accomodate a buffer of size `bytes`.
  */
 errval_t paging_alloc(struct paging_state *st, void **buf, size_t bytes);
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> week3
 /**
  * Functions to map a user provided frame.
  */
@@ -101,21 +190,34 @@ errval_t paging_map_frame_attr(struct paging_state *st, void **buf,
 /// Map user provided frame at user provided VA with given flags.
 errval_t paging_map_fixed_attr(struct paging_state *st, lvaddr_t vaddr,
                                struct capref frame, size_t bytes, int flags);
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> week3
 /**
  * refill slab allocator without causing a page fault
  */
 errval_t slab_refill_no_pagefault(struct slab_allocator *slabs,
                                   struct capref frame, size_t minbytes);
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> week3
 /**
  * \brief unmap region starting at address `region`.
  * NOTE: this function is currently here to make libbarrelfish compile. As
  * noted on paging_region_unmap we ignore unmap requests right now.
  */
 errval_t paging_unmap(struct paging_state *st, const void *region);
+<<<<<<< HEAD
 
 
+=======
+ 
+ 
+>>>>>>> week3
 /// Map user provided frame while allocating VA space for it
 static inline errval_t paging_map_frame(struct paging_state *st, void **buf,
                                         size_t bytes, struct capref frame,
@@ -124,7 +226,11 @@ static inline errval_t paging_map_frame(struct paging_state *st, void **buf,
     return paging_map_frame_attr(st, buf, bytes, frame,
             VREGION_FLAGS_READ_WRITE, arg1, arg2);
 }
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> week3
 /// Map user provided frame at user provided VA.
 static inline errval_t paging_map_fixed(struct paging_state *st, lvaddr_t vaddr,
                                         struct capref frame, size_t bytes)
@@ -132,9 +238,18 @@ static inline errval_t paging_map_fixed(struct paging_state *st, lvaddr_t vaddr,
     return paging_map_fixed_attr(st, vaddr, frame, bytes,
             VREGION_FLAGS_READ_WRITE);
 }
+<<<<<<< HEAD
 
 static inline lvaddr_t paging_genvaddr_to_lvaddr(genvaddr_t genvaddr) {
     return (lvaddr_t) genvaddr;
 }
 
 #endif // LIBBARRELFISH_PAGING_H
+=======
+ 
+static inline lvaddr_t paging_genvaddr_to_lvaddr(genvaddr_t genvaddr) {
+    return (lvaddr_t) genvaddr;
+}
+ 
+#endif // LIBBARRELFISH_PAGING_H
+>>>>>>> week3

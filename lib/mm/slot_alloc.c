@@ -28,7 +28,7 @@ errval_t slot_prealloc_refill(void *this)
     struct slot_prealloc *sa = this;
     uint8_t refill = !sa->current;
     static bool is_refilling = false;
-    errval_t err = SYS_ERR_OK;
+    errval_t err;
 
     if (is_refilling) {
         return SYS_ERR_OK;
@@ -80,7 +80,7 @@ errval_t slot_prealloc_refill(void *this)
 
 out:
     is_refilling = false;
-    return err;
+    return SYS_ERR_OK;
 }
 
 errval_t slot_alloc_prealloc(void *inst, uint64_t nslots, struct capref *ret)
@@ -133,6 +133,7 @@ errval_t slot_prealloc_init(struct slot_prealloc *this,
     this->meta[0].cap       = initial_cnode;
     this->meta[0].free      = initial_space;
     this->meta[1].free      = 0;
+    this->refilling         = false;
 
     return SYS_ERR_OK;
 }

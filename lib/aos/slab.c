@@ -18,6 +18,10 @@
 #include <aos/aos.h>
 #include <aos/slab.h>
 #include <aos/static_assert.h>
+#include <mm/mm.h>
+
+// lvaddr_t faddr = 0x10000000;
+lvaddr_t faddr = sizeof(struct mmnode)*64;
 
 struct block_head {
     struct block_head *next;///< Pointer to next block in free list
@@ -178,8 +182,27 @@ size_t slab_freecount(struct slab_allocator *slabs)
  */
 static errval_t slab_refill_pages(struct slab_allocator *slabs, size_t bytes)
 {
-    USER_PANIC("TODO: Not yet implemented.")
-    return LIB_ERR_NOT_IMPLEMENTED;
+
+    struct capref frame;
+    size_t fsize = 0;
+    errval_t err;
+    
+    err = frame_alloc(&frame, bytes, &fsize);
+    if (err_is_fail(err)) {
+        return err;
+    }
+    // TODO(M2): change to call frame_attr
+    // err = paging_map_fixed_attr(get_current_paging_state(), faddr, frame, fsize, VREGION_FLAGS_READ_WRITE);
+    void *buf;
+    err = paging_map_frame_attr(get_current_paging_state(), &buf, fsize, frame, VREGION_FLAGS_READ_WRITE, NULL, NULL);
+    if (err_is_fail(err)) {
+        return err;
+    }
+    
+    slab_grow(slabs, buf, bytes);
+    // faddr +=  fsize;
+
+    return SYS_ERR_OK;
 }
 
 /**

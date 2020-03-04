@@ -1,0 +1,7 @@
+armv7/lib/crt/crtbegin.o armv7/lib/crt/crtbegin.o.depend: \
+ /u/rv22698/Documents/Multicore/p2_code/lib/crt/crtbegin.c \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/stdint.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/machine/_default_types.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/features.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/_intsup.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/_stdint.h

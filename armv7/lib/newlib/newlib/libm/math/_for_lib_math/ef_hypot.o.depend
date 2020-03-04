@@ -1,0 +1,36 @@
+armv7/lib/newlib/newlib/libm/math/_for_lib_math/ef_hypot.o \
+ armv7/lib/newlib/newlib/libm/math/_for_lib_math/ef_hypot.o.depend: \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libm/math/ef_hypot.c \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libm/math/../common/fdlibm.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/math.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/reent.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/_ansi.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/newlib.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/config.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/machine/ieeefp.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/features.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/c/stddef.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/sys/_types.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/stdint.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/machine/_default_types.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/_intsup.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/_stdint.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/c/stdarg.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/lock.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/aos/thread_sync.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/limits.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/sys/cdefs.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/arch/arm/machine/_limits.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/syslimits.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/arch/arm/barrelfish_kpi/spinlocks_arch.h \
+ armv7/include/errors/errno.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/c/stdbool.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/_ansi.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/sys/types.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/aos/types.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/barrelfish_kpi/types.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/inttypes.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/stdlib.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/machine/stdlib.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/alloca.h \
+ /u/rv22698/Documents/Multicore/p2_code/include/aos/static_assert.h

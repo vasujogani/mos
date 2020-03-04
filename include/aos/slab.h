@@ -37,6 +37,10 @@ struct slab_allocator {
     struct slab_head *slabs;    ///< Pointer to list of slabs
     size_t blocksize;           ///< Size of blocks managed by this allocator
     slab_refill_func_t refill_func;  ///< Refill function
+<<<<<<< HEAD
+=======
+    int free_blocks;
+>>>>>>> week3
 };
 
 void slab_init(struct slab_allocator *slabs, size_t blocksize,
