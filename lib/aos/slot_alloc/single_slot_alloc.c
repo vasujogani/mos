@@ -171,7 +171,6 @@ errval_t single_slot_alloc_resize(struct single_slot_allocator *this,
 
     cslot_t grow = newslotcount - this->a.nslots;
 
-<<<<<<< HEAD
     size_t bufgrow = SINGLE_SLOT_ALLOC_BUFLEN(grow);
     // Check if we need to refill slab allocator
     if (slab_freecount(&this->slab) < bufgrow) {
@@ -192,15 +191,6 @@ errval_t single_slot_alloc_resize(struct single_slot_allocator *this,
         }
         slab_grow(&this->slab, buf, bufgrow);
     }
-=======
-    // Refill slab allocator
-    size_t bufgrow = SINGLE_SLOT_ALLOC_BUFLEN(grow);
-    void *buf = malloc(bufgrow);
-    if (!buf) {
-        return LIB_ERR_MALLOC_FAIL;
-    }
-    slab_grow(&this->slab, buf, bufgrow);
->>>>>>> week3
 
     // Update free slot metadata
     err = free_slots(this, this->a.nslots, grow, &this->a.mutex);
