@@ -95,7 +95,8 @@
 #define TASKCN_SLOT_SYSMEM      15  ///< ???
 #define TASKCN_SLOT_COREBOOT    16  ///< Copy of realmode section used to bootstrap a core
 #define TASKCN_SLOT_IPI         17  ///< Copy of IPI cap
-#define TASKCN_SLOTS_USER       18  ///< First free slot in taskcn for user
+#define TASKCN_SLOT_INIT_EP     18  ///< Endpoint for the init process
+#define TASKCN_SLOTS_USER       19  ///< First free slot in taskcn for user
 
 /* Page CNode */
 #define PAGECN_SLOT_VROOT       0 ///< First slot of page cnode is root page table

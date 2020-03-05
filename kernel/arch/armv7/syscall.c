@@ -1096,6 +1096,7 @@ handle_invoke(arch_registers_state_t *context, int argc)
         if (ObjType_EndPoint == to->type)
         {
             struct dcb *listener = to->u.endpoint.listener;
+            printf("domain id is %"PRIu64"\n", listener->domain_id);
             assert(listener != NULL);
 
             if (listener->disp) {

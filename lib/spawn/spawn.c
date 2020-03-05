@@ -131,6 +131,14 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si)
     temp.cnode = si->l2_cnodes[ROOTCN_SLOT_TASKCN];
     temp.slot = TASKCN_SLOT_SELFEP;
     err = cap_copy(temp, dispatch);
+
+    // copy init endpoint from parent to child
+    temp.slot = TASKCN_SLOT_INIT_EP;
+    struct capref parent_init_endpoint = {
+        .cnode = cnode_task,
+        .slot = TASKCN_SLOT_INIT_EP,
+    };
+    err = cap_copy(temp, parent_init_endpoint);
  
     si->dis_frame.cnode = si->l2_cnodes[ROOTCN_SLOT_TASKCN];
     si->dis_frame.slot = TASKCN_SLOT_DISPFRAME;

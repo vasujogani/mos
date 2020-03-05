@@ -35,6 +35,7 @@ extern void (*_libc_exit_func)(int);
 extern void (*_libc_assert_func)(const char *, const char *, const char *, int);
 
 void libc_exit(int);
+void recv_handler2(void *arg);
 
 void libc_exit(int status)
 {
@@ -155,6 +156,54 @@ errval_t barrelfish_init_onthread(struct spawn_domain_params *params)
         return SYS_ERR_OK;
     }
 
+    // create an lmp_chan structure for communicating with init
+    struct lmp_chan init_chan;
+    lmp_chan_init(&init_chan);
+    if (err_is_fail(err)) {
+        printf("WTTF\n");
+    }
+
+    // create local endpoint
+    struct capref local_capref;
+    struct lmp_endpoint *local_endpoint;
+    err = endpoint_create(DEFAULT_LMP_BUF_WORDS, &local_capref, &local_endpoint);
+    if (err_is_fail(err)) {
+        printf("WTTF\n");
+    }
+    struct capref copy;
+    err = slot_alloc(&copy);
+    if (err_is_fail(err)) {
+        printf("WTTF\n");
+    }
+
+    err = cap_copy(copy, local_capref);
+    if (err_is_fail(err)) {
+        printf("WTTF\n");
+    }
+
+    init_chan.local_cap = local_capref;
+    init_chan.endpoint = local_endpoint;
+
+    // set remote endpoint
+    struct capref remote_capref = {
+        .cnode = cnode_task,
+        .slot = TASKCN_SLOT_INIT_EP,
+    };
+    init_chan.remote_cap = remote_capref;
+    printf("A\n");
+    err = lmp_chan_alloc_recv_slot(&init_chan);
+    err = lmp_chan_register_recv(&init_chan, default_ws, MKCLOSURE(recv_handler2, &init_chan));
+    if (err_is_fail(err)) {
+        printf("WTTF\n");
+    }
+    printf("B\n");
+    err = lmp_ep_send0(init_chan.remote_cap, LMP_SEND_FLAGS_DEFAULT, NULL_CAP);
+    if (err_is_fail(err)) {
+        printf("WTTF %s\n", err_getstring(err));
+    }
+
+    printf("B\n");
+
     // TODO MILESTONE 3: register ourselves with init
     /* allocate lmp channel structure */
     /* create local endpoint */
@@ -171,6 +220,10 @@ errval_t barrelfish_init_onthread(struct spawn_domain_params *params)
     // right now we don't have the nameservice & don't need the terminal
     // and domain spanning, so we return here
     return SYS_ERR_OK;
+}
+
+void recv_handler2(void *arg) {
+    printf("IN HANDLER\n");
 }
 
 

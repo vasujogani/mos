@@ -55,12 +55,10 @@ errval_t lmp_endpoint_alloc(size_t buflen, struct lmp_endpoint **retep)
         disp_enable(handle);
         return LIB_ERR_NO_ENDPOINT_SPACE;
     }
-
     endpoint_init(ep);
     ep->buflen = buflen;
-
     disp_enable(handle);
-
+    
     assert(retep != NULL);
     *retep = ep;
     return SYS_ERR_OK;
@@ -115,7 +113,6 @@ errval_t lmp_endpoint_create_in_slot(size_t buflen, struct capref dest,
     uintptr_t epoffset = (uintptr_t)&ep->k - (uintptr_t)curdispatcher();
 
     // debug_printf("%s: calling mint with epoffset = %"PRIuPTR", buflen = %zu\n", __FUNCTION__, epoffset, buflen);
-
     // mint new badged cap from our existing reply endpoint
     return cap_mint(dest, cap_selfep, epoffset, buflen);
 }
