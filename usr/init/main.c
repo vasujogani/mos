@@ -18,6 +18,7 @@
 #include <aos/aos.h>
 #include <aos/waitset.h>
 #include <aos/morecore.h>
+#include <aos/dispatcher_arch.h>
 #include <aos/paging.h>
 #include <spawn/spawn.h>
 
@@ -27,7 +28,7 @@
 coreid_t my_core_id;
 struct bootinfo *bi;
 
-void recv_handler(void *arg);
+void init_recv_handler(void *arg);
 
 int main(int argc, char *argv[])
 {
@@ -55,27 +56,26 @@ int main(int argc, char *argv[])
         DEBUG_ERR(err, "initialize_ram_alloc");
     }
 
+    lmp_endpoint_init();
+
+
     // set slot TASKCN_SLOT_INIT_ENDPOINT to be the current endpoint
     // this requires creating an endpoint from the dispatcher because
     // init's CSPACE is not filled out for some reason
     struct capref dispatcher;
     err = slot_alloc(&dispatcher);
-    err = dispatcher_create(dispatcher);
+    if (err_is_fail(err)) {
+        printf("Errrr\n");
+    }
 
-    struct capref init_endpoint = {
-        .cnode = cnode_task,
-        .slot = TASKCN_SLOT_INIT_EP,
-    };
+    dispatcher_handle_t handle = curdispatcher();
+    struct capref dispatch_cap = get_dispatcher_generic(handle)->dcb_cap;
+
+    // copy into selfep slot
     struct capref temp;
     err = slot_alloc(&temp);
-    err = cap_retype(temp, dispatcher, 0, ObjType_EndPoint, 0, 1);
-    err = cap_copy(init_endpoint, temp);
-    if (err_is_fail(err)) {
-        DEBUG_ERR(err, "unable to copy self ep for init");
-        abort();
-    }
-    // also copy into selfep slot
-    err = cap_copy(cap_selfep, init_endpoint);
+    err = cap_retype(temp, dispatch_cap, 0, ObjType_EndPoint, 0, 1);
+    err = cap_copy(cap_selfep, temp);
     if (err_is_fail(err)) {
         DEBUG_ERR(err, "unable to set up selfep");
         abort();
@@ -84,29 +84,31 @@ int main(int argc, char *argv[])
     // create a channel for open receiving
     struct lmp_chan lc;
     lmp_chan_init(&lc);
-    printf("A\n");
-    struct capref endpoint;
-    struct lmp_endpoint *endpoint_lmp;
-    err = endpoint_create(DEFAULT_LMP_BUF_WORDS, &endpoint, &endpoint_lmp);
+    err = endpoint_create(DEFAULT_LMP_BUF_WORDS, &(lc.local_cap), &(lc.endpoint));
     if (err_is_fail(err)) {
-        printf("b %s\n", err_getstring(err));
+        return err_push(err, LIB_ERR_ENDPOINT_CREATE);
     }
-    lc.endpoint = endpoint_lmp;
-    lc.local_cap = endpoint;
-    printf("c\n");
+
+    struct capref init_endpoint = {
+        .cnode = cnode_task,
+        .slot = TASKCN_SLOT_INITEP,
+    };
+    err = cap_copy(init_endpoint, lc.local_cap);
+    if (err_is_fail(err)) {
+        return err_push(err, LIB_ERR_CAP_COPY);
+    }
     err = lmp_chan_alloc_recv_slot(&lc);
     if (err_is_fail(err)) {
-        printf("d %s\n", err_getstring(err));
+        return err_push(err, LIB_ERR_LMP_ALLOC_RECV_SLOT);
     }
-    err = lmp_chan_register_recv(&lc, get_default_waitset(), MKCLOSURE(recv_handler, &lc));
+    err = lmp_chan_register_recv(&lc, get_default_waitset(), MKCLOSURE(init_recv_handler, &lc));
     if (err_is_fail(err)) {
-        printf("d %s\n", err_getstring(err));
+        return err_push(err, LIB_ERR_CHAN_REGISTER_RECV);
     }
+
     // spawn_load_by_name("hello", (struct spawninfo *) malloc(sizeof(struct spawninfo)));
 
     spawn_load_by_name("memeater", (struct spawninfo *) malloc(sizeof(struct spawninfo)));
-
-
 
     debug_printf("Message handler loop\n");
     // Hang around
@@ -122,13 +124,32 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
-void recv_handler(void *arg) {
+void init_recv_handler(void *arg) {
     errval_t err;
-    printf("Got a message\n");
     struct lmp_chan *lc = arg;
     struct lmp_recv_msg msg = LMP_RECV_MSG_INIT;
-    struct capref cap;
-    err = lmp_chan_recv(lc, &msg, &cap);
-    lmp_chan_register_recv(lc, get_default_waitset(), MKCLOSURE(recv_handler, arg));
+    struct capref recv_cap;
+    err = lmp_chan_recv(lc, &msg, &recv_cap);
+    if (err_is_fail(err)) {
+        printf("WTF\n");
+    }
+    printf("HEREEE\n");
+    struct lmp_chan new_chan;
+    err = lmp_chan_accept(&new_chan, DEFAULT_LMP_BUF_WORDS, recv_cap);
+    if (err_is_fail(err)) {
+        printf("ERR %s\n", err_getstring(err));
+    }
+
+    // reset the callback for this current channel
+    err = lmp_chan_register_recv(lc, get_default_waitset(), MKCLOSURE(init_recv_handler, arg));
+    if (err_is_fail(err)) {
+        printf("ERR %s\n", err_getstring(err));
+    }
+
+    // send an acknowledgement to the remote domain
+    err = lmp_ep_send0(new_chan.remote_cap, LMP_SEND_FLAGS_DEFAULT, NULL_CAP);
+    if (err_is_fail(err)) {
+        printf("ERR %s\n", err_getstring(err));
+    }
     // return SYS_ERR_OK;
 }

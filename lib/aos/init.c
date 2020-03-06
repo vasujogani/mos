@@ -22,6 +22,7 @@
 #include <barrelfish_kpi/dispatcher_shared.h>
 #include <aos/morecore.h>
 #include <aos/paging.h>
+#include <aos/aos_rpc.h>
 #include <barrelfish_kpi/domain_params.h>
 #include "threads_priv.h"
 #include "init.h"
@@ -159,50 +160,52 @@ errval_t barrelfish_init_onthread(struct spawn_domain_params *params)
     // create an lmp_chan structure for communicating with init
     struct lmp_chan init_chan;
     lmp_chan_init(&init_chan);
-    if (err_is_fail(err)) {
-        printf("WTTF\n");
-    }
 
     // create local endpoint
-    struct capref local_capref;
-    struct lmp_endpoint *local_endpoint;
-    err = endpoint_create(DEFAULT_LMP_BUF_WORDS, &local_capref, &local_endpoint);
+    err = endpoint_create(DEFAULT_LMP_BUF_WORDS, &(init_chan.local_cap), &(init_chan.endpoint));
     if (err_is_fail(err)) {
-        printf("WTTF\n");
-    }
-    struct capref copy;
-    err = slot_alloc(&copy);
-    if (err_is_fail(err)) {
-        printf("WTTF\n");
+        return err_push(err, LIB_ERR_ENDPOINT_CREATE);
     }
 
-    err = cap_copy(copy, local_capref);
+    // create a local ep copy for init
+    struct capref init_copy;
+    slot_alloc(&init_copy);
+    err = cap_copy(init_copy, init_chan.local_cap);
     if (err_is_fail(err)) {
-        printf("WTTF\n");
+        return err_push(err, LIB_ERR_CAP_COPY);
     }
 
-    init_chan.local_cap = local_capref;
-    init_chan.endpoint = local_endpoint;
+    // set the remote endpoint
+    init_chan.remote_cap = cap_initep;
 
-    // set remote endpoint
-    struct capref remote_capref = {
-        .cnode = cnode_task,
-        .slot = TASKCN_SLOT_INIT_EP,
-    };
-    init_chan.remote_cap = remote_capref;
-    printf("A\n");
+    // allocate a receive capability slot
     err = lmp_chan_alloc_recv_slot(&init_chan);
+    if (err_is_fail(err)) {
+        return err_push(err, LIB_ERR_LMP_ALLOC_RECV_SLOT);
+    }
+
+    // register a callabck for receive events
     err = lmp_chan_register_recv(&init_chan, default_ws, MKCLOSURE(recv_handler2, &init_chan));
     if (err_is_fail(err)) {
-        printf("WTTF\n");
-    }
-    printf("B\n");
-    err = lmp_ep_send0(init_chan.remote_cap, LMP_SEND_FLAGS_DEFAULT, NULL_CAP);
-    if (err_is_fail(err)) {
-        printf("WTTF %s\n", err_getstring(err));
+        return err_push(err, LIB_ERR_CHAN_REGISTER_RECV);
     }
 
-    printf("B\n");
+    // send local ep to init
+    err = lmp_ep_send0(init_chan.remote_cap, LMP_SEND_FLAGS_DEFAULT, init_copy);
+    if (err_is_fail(err)) {
+        return err_push(err, LIB_ERR_LMP_CHAN_SEND);
+    }
+
+    // wait for init to acknowledge receiving the endpoint
+    err = event_dispatch(default_ws);
+    if (err_is_fail(err)) {
+        return err_push(err, LIB_ERR_EVENT_DISPATCH);
+    }
+    
+    // initialize init RPC client with lmp channel 
+    struct aos_rpc rpc_client;
+    err = aos_rpc_init(&rpc_client);
+    set_init_rpc(&rpc_client);
 
     // TODO MILESTONE 3: register ourselves with init
     /* allocate lmp channel structure */
@@ -222,9 +225,9 @@ errval_t barrelfish_init_onthread(struct spawn_domain_params *params)
     return SYS_ERR_OK;
 }
 
-void recv_handler2(void *arg) {
-    printf("IN HANDLER\n");
-}
+    void recv_handler2(void *arg) {
+        // do some verification
+    }
 
 
 /**

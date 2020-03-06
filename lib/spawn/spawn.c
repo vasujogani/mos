@@ -133,12 +133,15 @@ errval_t spawn_load_by_name(void * binary_name, struct spawninfo * si)
     err = cap_copy(temp, dispatch);
 
     // copy init endpoint from parent to child
-    temp.slot = TASKCN_SLOT_INIT_EP;
+    temp.slot = TASKCN_SLOT_INITEP;
     struct capref parent_init_endpoint = {
         .cnode = cnode_task,
-        .slot = TASKCN_SLOT_INIT_EP,
+        .slot = TASKCN_SLOT_INITEP,
     };
     err = cap_copy(temp, parent_init_endpoint);
+    if (err_is_fail(err)) {
+        printf("ERROR\n");
+    }
  
     si->dis_frame.cnode = si->l2_cnodes[ROOTCN_SLOT_TASKCN];
     si->dis_frame.slot = TASKCN_SLOT_DISPFRAME;
