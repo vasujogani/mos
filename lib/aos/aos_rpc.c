@@ -43,11 +43,28 @@ errval_t aos_rpc_serial_getchar(struct aos_rpc *chan, char *retc)
     return SYS_ERR_OK;
 }
 
+errval_t putchar_send_handler(uintptr_t *args) {
+    //sf 
+    struct aos_rpc *rpc = (struct aos_rpc *) args[0];
+    char* to_put = (char*) args[1];
+    errval_t err;
+    err = lmp_chan_send2(&rpc->channel, LMP_FLAG_SYNC, NULL /* rpc->channel.local_cap */, AOS_RPC_PUTCHAR, *to_put);
+    assert(err_is_ok(err));
+    // register again if failed
+    return SYS_ERR_OK;
+}
 
 errval_t aos_rpc_serial_putchar(struct aos_rpc *chan, char c)
 {
     // TODO implement functionality to send a character to the
     // serial port.
+    uintptr_t args[2];
+    args[0] = (uintptr_t) chan;
+    args[1] = (uintptr_t) &c;
+
+    errval_t err = lmp_chan_register_send(&chan->channel, chan->ws, MKCLOSURE(putchar_send_handler, args));
+    event_dispatch(chan->ws);
+    assert(err_is_ok(err));
     return SYS_ERR_OK;
 }
 
@@ -80,8 +97,38 @@ errval_t aos_rpc_get_device_cap(struct aos_rpc *rpc,
     return LIB_ERR_NOT_IMPLEMENTED;
 }
 
+errval_t handshake_send_handler(void *args) {
+    struct aos_rpc *rpc = (struct aos_rpc *) args;
+    errval_t err;
+    lmp_chan_send1(&rpc->channel, LMP_FLAG_SYNC, NULL, RPC_HANDSHAKE);
+    return SYS_ERR_OK;
+}
+
+errval_t handshake_recv_handler(void *args) {
+    struct aos_rpc *rpc = (struct aos_rpc *) args;
+    struct lmp_recv_msg msg = LMP_RECV_MSG_INIT;
+    struct capref cap;
+    errval_t err = lmp_chan_recv(&rpc->channel, &msg, &cap);
+    assert(err_is_ok(err));
+
+    assert(msg.words[0] == RPC_OK);
+
+    return SYS_ERR_OK;
+}
+
+
 errval_t aos_rpc_init(struct aos_rpc *rpc)
 {
     // TODO: Initialize given rpc channel
+    errval_t err;
+    rpc->ws = get_default_waitset();
+    struct waitset *ws = get_default_waitset();
+    err = lmp_chan_accept(&rpc->channel, DEFAULT_LMP_BUF_WORDS, cap_initep);
+    // err = lmp_chan_
+    err =lmp_chan_register_recv(&rpc->channel,rpc->ws, MKCLOSURE((void*)handshake_recv_handler, rpc));
+    err = lmp_chan_register_send(&rpc->channel,rpc->ws, MKCLOSURE((void*)handshake_send_handler, rpc));
+    // loop till success?
+    event_dispatch(rpc->ws);
+
     return SYS_ERR_OK;
 }

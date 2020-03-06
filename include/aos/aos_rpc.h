@@ -17,8 +17,18 @@
 
 #include <aos/aos.h>
 
+#define RPC_OK 0             
+#define RPC_FAILED 1        
+#define RPC_HANDSHAKE 2 << 2
+#define RPC_MEMORY 3 << 2
+#define RPC_NUMBER 4 << 2
+#define RPC_PUTCHAR 5 << 2
+#define RPC_STRING 6 << 2 
+
 struct aos_rpc {
     // TODO: add state for your implementation
+    struct lmp_chan channel;
+    struct waitset *ws;
 };
 
 /**
