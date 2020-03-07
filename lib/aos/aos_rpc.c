@@ -223,7 +223,6 @@ errval_t aos_rpc_init(struct aos_rpc *rpc)
     // TODO: Initialize given rpc channel
     errval_t err;
     rpc->ws = get_default_waitset();
-    struct waitset *ws = get_default_waitset();
     err = lmp_chan_accept(&rpc->channel, DEFAULT_LMP_BUF_WORDS, cap_initep);
     // err = lmp_chan_
     err = lmp_chan_register_recv(&rpc->channel,rpc->ws, MKCLOSURE((void*)handshake_recv_handler, rpc));
