@@ -101,6 +101,6 @@ errval_t aos_rpc_get_device_cap(struct aos_rpc *rpc, lpaddr_t paddr, size_t byte
  * TODO: you may want to change the inteface of your init function, depending
  * on how you design your message passing code.
  */
-errval_t aos_rpc_init(struct aos_rpc *rpc);
+errval_t aos_rpc_init(struct aos_rpc *rpc, struct lmp_chan *channel);
 
 #endif // _LIB_BARRELFISH_AOS_MESSAGES_H

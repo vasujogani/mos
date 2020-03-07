@@ -36,7 +36,8 @@ extern void (*_libc_exit_func)(int);
 extern void (*_libc_assert_func)(const char *, const char *, const char *, int);
 
 void libc_exit(int);
-void recv_handler2(void *arg);
+void handshake_send_handler(void *arg);
+void acknowledgement_recv_handler(void *arg);
 
 void libc_exit(int status)
 {
@@ -167,14 +168,6 @@ errval_t barrelfish_init_onthread(struct spawn_domain_params *params)
         return err_push(err, LIB_ERR_ENDPOINT_CREATE);
     }
 
-    // create a local ep copy for init
-    struct capref init_copy;
-    slot_alloc(&init_copy);
-    err = cap_copy(init_copy, init_chan.local_cap);
-    if (err_is_fail(err)) {
-        return err_push(err, LIB_ERR_CAP_COPY);
-    }
-
     // set the remote endpoint
     init_chan.remote_cap = cap_initep;
 
@@ -184,16 +177,16 @@ errval_t barrelfish_init_onthread(struct spawn_domain_params *params)
         return err_push(err, LIB_ERR_LMP_ALLOC_RECV_SLOT);
     }
 
-    // register a callabck for receive events
-    err = lmp_chan_register_recv(&init_chan, default_ws, MKCLOSURE(recv_handler2, &init_chan));
+    // register a callback for send events
+    err = lmp_chan_register_send(&init_chan, default_ws, MKCLOSURE(handshake_send_handler, &init_chan));
     if (err_is_fail(err)) {
-        return err_push(err, LIB_ERR_CHAN_REGISTER_RECV);
+        return err_push(err, LIB_ERR_CHAN_REGISTER_SEND);
     }
 
-    // send local ep to init
-    err = lmp_ep_send0(init_chan.remote_cap, LMP_SEND_FLAGS_DEFAULT, init_copy);
+    // register a callabck for receive events
+    err = lmp_chan_register_recv(&init_chan, default_ws, MKCLOSURE(acknowledgement_recv_handler, &init_chan));
     if (err_is_fail(err)) {
-        return err_push(err, LIB_ERR_LMP_CHAN_SEND);
+        return err_push(err, LIB_ERR_CHAN_REGISTER_RECV);
     }
 
     // wait for init to acknowledge receiving the endpoint
@@ -203,9 +196,7 @@ errval_t barrelfish_init_onthread(struct spawn_domain_params *params)
     }
     
     // initialize init RPC client with lmp channel 
-    struct aos_rpc rpc_client;
-    err = aos_rpc_init(&rpc_client);
-    set_init_rpc(&rpc_client);
+    
 
     // TODO MILESTONE 3: register ourselves with init
     /* allocate lmp channel structure */
@@ -225,9 +216,47 @@ errval_t barrelfish_init_onthread(struct spawn_domain_params *params)
     return SYS_ERR_OK;
 }
 
-    void recv_handler2(void *arg) {
-        // do some verification
+void handshake_send_handler(void *args) {
+    struct lmp_chan *init_chan = (struct lmp_chan *) args;
+    
+    errval_t err;
+    // create a local ep copy for init
+    struct capref init_copy;
+    slot_alloc(&init_copy);
+    err = cap_copy(init_copy, init_chan->local_cap);
+    if (err_is_fail(err)) {
+        printf("Error copying local cap\n");
     }
+
+    printf("IN HANDSHAKE SEND\n");
+    err = lmp_chan_send1(init_chan, LMP_FLAG_SYNC, init_copy, RPC_HANDSHAKE);
+    if (err_is_fail(err)) {
+        printf("Error sending handshake %s\n", err_getstring(err));
+    }
+    // wait for receive
+    event_dispatch(get_default_waitset());
+}
+
+void acknowledgement_recv_handler(void *args) {
+    errval_t err;
+    struct lmp_chan *lc = args;
+    struct lmp_recv_msg msg = LMP_RECV_MSG_INIT;
+    err = lmp_chan_recv(lc, &msg, NULL);
+    if (msg.buf.msglen > 0 && msg.words[0] == RPC_OK) {
+        // received proper acknowledgement, now initialize RPC client
+        printf("SUCCESSFUL\n");
+        struct aos_rpc rpc_client;
+        err = aos_rpc_init(&rpc_client, lc);
+        set_init_rpc(&rpc_client);
+
+        // allocate a receive capability slot
+        err = lmp_chan_alloc_recv_slot(lc);
+        if (err_is_fail(err)) {
+            printf("Unable to allocate new receive slot");
+        }
+    }
+    printf("IN ACKNOWLEDGEMENT RECEIVE\n");
+}
 
 
 /**
