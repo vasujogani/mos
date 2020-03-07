@@ -98,6 +98,15 @@ int main(int argc, char *argv[])
         }
     }
 
+    // start here
+    cap_retype(cap_selfep, cap_dispatcher, 0. ObjType_EndPoint, 0, 1);
+    struct lmp_chan lc;
+    lmp_chan_accept(lc, DEFAULT_LMP_WORDS, NULL_CAP);
+    lmp_chan_alloc_recv_slot(&lc);
+    cap_copy(cap_initep, lc.local_cap);
+    lmp_chan_register_recv(&lc, get_default_waitset(), MKCLOSURE((void *) init_recv_handler, &lc));
+
+
     return EXIT_SUCCESS;
 }
 
