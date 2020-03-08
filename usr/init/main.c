@@ -29,12 +29,53 @@
 coreid_t my_core_id;
 struct bootinfo *bi;
 
+struct client_data {
+    struct lmp_chan lc;
+    char* buf;
+    size_t buf_idx;
+    struct capability id_cap;
+    struct client_data *next;
+};
+
+struct client_data* clients = NULL;
+ 
+ 
+
 void handshake_recv_handler(struct lmp_chan *lc, struct capref recv_cap);
 void acknowledgement_send_handler(void *arg);
-void number_receive_handler(struct lmp_chan *lc, uintptr_t value);
+void number_receive_handler(struct lmp_chan *lc, uintptr_t value, struct client_data *clients);
 void generic_recv_handler(void *arg);
-void ram_cap_handler(struct lmp_chan *lc, size_t requested_size);
+void ram_cap_handler(struct lmp_chan *lc, size_t requested_size, struct client_data *clients);
 void memory_send_handler(void *arg);
+struct client_data* find_client(struct capref* cap);
+void add_client(struct client_data *client);
+
+
+struct client_data* find_client(struct capref* cap) {
+    struct capability capp; // to store info
+    errval_t err = debug_cap_identify(*cap, &capp);
+
+    printf("ERR IS %s\n", err_getstring(err));
+    assert(err_is_ok(err));
+    struct client_data* to_ret = clients;
+    while (to_ret) {
+        if (to_ret->id_cap.u.endpoint.listener == capp.u.endpoint.listener && to_ret->id_cap.u.endpoint.epoffset == capp.u.endpoint.epoffset) {
+            break;
+        }
+        to_ret = to_ret->next;
+    }
+ 
+    return to_ret;
+}
+
+void add_client(struct client_data *client) {
+    if (clients == NULL) {
+        clients = client;
+    } else {
+        client->next = clients;
+        clients = client;
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -80,6 +121,7 @@ int main(int argc, char *argv[])
     // create a channel for open receiving
     struct lmp_chan lc;
     lmp_chan_init(&lc);
+    printf("CNODE LEVEL IS %d\n", lc.remote_cap.cnode.level);
     err = endpoint_create(DEFAULT_LMP_BUF_WORDS, &(lc.local_cap), &(lc.endpoint));
     err = cap_copy(cap_initep, lc.local_cap);
     err = lmp_chan_alloc_recv_slot(&lc);
@@ -97,16 +139,6 @@ int main(int argc, char *argv[])
             abort();
         }
     }
-
-    // start here
-    cap_retype(cap_selfep, cap_dispatcher, 0. ObjType_EndPoint, 0, 1);
-    struct lmp_chan lc;
-    lmp_chan_accept(lc, DEFAULT_LMP_WORDS, NULL_CAP);
-    lmp_chan_alloc_recv_slot(&lc);
-    cap_copy(cap_initep, lc.local_cap);
-    lmp_chan_register_recv(&lc, get_default_waitset(), MKCLOSURE((void *) init_recv_handler, &lc));
-
-
     return EXIT_SUCCESS;
 }
 
@@ -119,19 +151,21 @@ void generic_recv_handler(void *arg) {
     // check that a proper message type was sent    
     assert(msg.buf.msglen > 0);
     uintptr_t messageType = msg.words[0];
-    switch (messageType) {
-        case RPC_HANDSHAKE:
-            handshake_recv_handler(lc, recv_cap);
-            break;
-        case RPC_NUMBER:
-            number_receive_handler(lc, msg.words[1]);
-            break;
-        case RPC_STRING:
-            break;
-        case RPC_MEMORY:
-            printf("REQUESTING MEMORY\n");
-            ram_cap_handler(lc, (size_t)msg.words[1]);
-            break;
+    if (messageType == RPC_HANDSHAKE) {
+        handshake_recv_handler(lc, recv_cap);
+    } else {
+        // find the correct channel to execute on
+        struct client_data *client = find_client(&recv_cap);
+        switch (messageType) {
+            case RPC_NUMBER:
+                number_receive_handler(lc, msg.words[1], client);
+                break;
+            case RPC_STRING:
+                break;
+            case RPC_MEMORY:
+                ram_cap_handler(lc, (size_t)msg.words[1], client);
+                break;
+        }
     }
 
     // reset the callback for this handshake channel
@@ -144,13 +178,19 @@ void handshake_recv_handler(struct lmp_chan *lc, struct capref recv_cap) {
     // create new channel for communication
     struct lmp_chan new_chan;
     errval_t err = lmp_chan_accept(&new_chan, DEFAULT_LMP_BUF_WORDS, recv_cap);
-    // assert(!capref_is_null(recv_cap));
-     assert(capcmp(recv_cap, new_chan.remote_cap));
-    // printf("HERRRE\n");
-    // set the callbacks for the new channel
-    err = lmp_chan_alloc_recv_slot(&new_chan);
-    err = lmp_chan_register_send(&new_chan, get_default_waitset(), MKCLOSURE(acknowledgement_send_handler, &new_chan));
-    err = lmp_chan_register_recv(&new_chan, get_default_waitset(), MKCLOSURE(generic_recv_handler, &new_chan));
+    assert(err_is_ok(err));
+    assert(capcmp(recv_cap, new_chan.remote_cap));
+
+    struct client_data *client = malloc(sizeof(struct client_data));
+    client->lc = new_chan;
+    client->buf = NULL;
+    client->buf_idx = 0;
+    client->next = NULL;
+    debug_cap_identify(recv_cap, &client->id_cap);
+    add_client(client);
+
+    lmp_chan_register_send(&new_chan, get_default_waitset(), MKCLOSURE((void *)acknowledgement_send_handler, &new_chan));
+
     event_dispatch(get_default_waitset());
 }
 
@@ -161,41 +201,29 @@ void acknowledgement_send_handler(void *arg) {
     err = lmp_chan_send1(lc, LMP_SEND_FLAGS_DEFAULT, NULL_CAP, RPC_OK);
 }
 
-void number_receive_handler(struct lmp_chan *lc, uintptr_t value) {
+void number_receive_handler(struct lmp_chan *lc, uintptr_t value, struct client_data *data) {
     printf("Number received: %d\n", value);
+    lmp_chan_register_send(&data->lc, get_default_waitset(), MKCLOSURE((void *)acknowledgement_send_handler, &data->lc));
 }
 
-void ram_cap_handler(struct lmp_chan *lc, size_t requested_size) {
+void ram_cap_handler(struct lmp_chan *lc, size_t requested_size, struct client_data *data) {
     //  allocate a ram cap and return 
-    printf("Size requested is %d\n", requested_size);
     struct capref ram_cap;
     errval_t err = ram_alloc(&ram_cap, requested_size);
     assert(err_is_ok(err));
     uintptr_t uargs[2];
-    uargs[0] = (uintptr_t) lc;
+    uargs[0] = (uintptr_t) &data->lc;
     uargs[1] = (uintptr_t) &ram_cap;
 
-    err = lmp_chan_register_send(lc, get_default_waitset(), MKCLOSURE(memory_send_handler, uargs));
+    err = lmp_chan_register_send(&data->lc, get_default_waitset(), MKCLOSURE(memory_send_handler, uargs));
     event_dispatch(get_default_waitset());
 }
 
 void memory_send_handler(void *arg) {
-    printf("IN MEMORY SEND HANDLER\n");
     uintptr_t *uarg = (uintptr_t *)arg;
     struct lmp_chan *lc = (struct lmp_chan *)uarg[0];
     struct capref ram_cap = *((struct capref *)uarg[1]);
-    struct capref test;
-    slot_alloc(&test);
-    errval_t err = cap_copy(test, ram_cap);
-    capaddr_t cap_level = get_cap_addr(ram_cap);
-    printf("cap addr %d\n", cap_level);
-    printf("cap addr %d\n", lc->remote_cap);
-    if (err_is_fail(err)) {
-        printf("ERROR IS %s\n", err_getstring(err));
-    }
-    printf("Ram slot num is %d\n", ram_cap.slot);
-    err = lmp_chan_send1(lc, LMP_SEND_FLAGS_DEFAULT, ram_cap, RPC_OK);
-    printf("Err is %s\n", err_getstring(err));
+
+    errval_t err = lmp_chan_send1(lc, LMP_SEND_FLAGS_DEFAULT, ram_cap, RPC_OK);
     assert(err_is_ok(err));
-    printf("AT END OF MEMORY_SEND_HANDLER\n");
 }

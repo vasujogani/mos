@@ -121,7 +121,6 @@ void ram_cap_send_handler(void *args)
 }
 
 void ram_cap_recv_handler(void *args) {
-    printf("IN RAM RECV HANDLER\n");
     uintptr_t *uargs = (uintptr_t *)args;
     struct aos_rpc* rpc = (struct aos_rpc*) uargs[0];
     struct lmp_recv_msg msg = LMP_RECV_MSG_INIT;
@@ -130,16 +129,15 @@ void ram_cap_recv_handler(void *args) {
     assert(err_is_ok(err));
     assert(msg.buf.msglen > 0);
     assert(msg.words[0] == RPC_OK);
-
     struct capref *retcap = (struct capref *)uargs[2];
-    cap_copy(*retcap, recv_cap);
+    err = cap_copy(*retcap, recv_cap);
 }
 
 errval_t aos_rpc_get_ram_cap(struct aos_rpc *chan, size_t request_bytes,
                              struct capref *retcap, size_t *ret_bytes)
 {
     // Fill in args 1. aos_rpc 2. request_bytes 3. retcap 4. ret_bytes
-    uintptr_t args[4];
+    uintptr_t args[3];
     args[0] = (uintptr_t) chan;
     args[1] = (uintptr_t) &request_bytes;
     args[2] = (uintptr_t) retcap;
@@ -152,7 +150,6 @@ errval_t aos_rpc_get_ram_cap(struct aos_rpc *chan, size_t request_bytes,
  
     lmp_chan_register_recv(&chan->channel, chan->ws, MKCLOSURE((void *) ram_cap_recv_handler, args));
  
-    event_dispatch(chan->ws);
     event_dispatch(chan->ws);
     
     *ret_bytes = request_bytes;
@@ -290,7 +287,6 @@ errval_t aos_rpc_init(struct aos_rpc *rpc)
 }
 
 void handshake_send_handler(void *arg) {
-    printf("IN HANDSHAKE SEND\n");
     struct aos_rpc *rpc = (struct aos_rpc *) arg;
     struct lmp_chan chan = rpc->channel;
 
@@ -299,23 +295,23 @@ void handshake_send_handler(void *arg) {
     struct capref init_copy;
     slot_alloc(&init_copy);
     err = cap_copy(init_copy, chan.local_cap);
-    printf("Not null here\n");
     assert(!capref_is_null(init_copy));
-    err = lmp_chan_send1(&chan, LMP_FLAG_SYNC, init_copy, RPC_HANDSHAKE);
+    err = lmp_chan_send1(&chan, LMP_FLAG_SYNC, chan.local_cap, RPC_HANDSHAKE);
 
     event_dispatch(rpc->ws);
 }
 
 void acknowledgement_recv_handler(void *arg) {
-    printf("IN ACKNOWLEDGEMENT RECEIVE\n");
     errval_t err;
     
     struct aos_rpc *rpc = (struct aos_rpc *) arg;
     struct lmp_chan chan = rpc->channel;
     struct lmp_recv_msg msg = LMP_RECV_MSG_INIT;
-    err = lmp_chan_recv(&chan, &msg, NULL);
-
+    struct capref recv_cap;
+    err = lmp_chan_recv(&chan, &msg, &recv_cap);
+    
     assert(msg.buf.msglen == 1 && msg.words[0] == RPC_OK);
+    chan.remote_cap = recv_cap;
 }
 
 // void init_recv_handler(void *arg) {
