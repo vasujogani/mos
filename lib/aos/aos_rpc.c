@@ -19,6 +19,8 @@ void acknowledgement_recv_handler(void *arg);
 void number_send_handler(void *arg);
 void ram_cap_send_handler(void *args);
 void ram_cap_recv_handler(void *args);
+void spawn_send_handler(void *args);
+void spawn_recv_handler(void *args);
 
 
 void number_send_handler(void *arg)
@@ -136,6 +138,7 @@ void ram_cap_recv_handler(void *args) {
 errval_t aos_rpc_get_ram_cap(struct aos_rpc *chan, size_t request_bytes,
                              struct capref *retcap, size_t *ret_bytes)
 {
+    printf("in aos_rpc_get_ram_cap\n");
     // Fill in args 1. aos_rpc 2. request_bytes 3. retcap 4. ret_bytes
     uintptr_t args[3];
     args[0] = (uintptr_t) chan;
@@ -207,12 +210,6 @@ errval_t aos_rpc_serial_putchar(struct aos_rpc *chan, char c)
     // errval_t err = lmp_chan_register_send(&chan->channel, chan->ws, MKCLOSURE(putchar_send_handler, args));
     // event_dispatch(chan->ws);
     // assert(err_is_ok(err));
-    return SYS_ERR_OK;
-}
-
-errval_t aos_rpc_process_spawn(struct aos_rpc *chan, char *name,
-                               coreid_t core, domainid_t *newpid)
-{
     return SYS_ERR_OK;
 }
 
@@ -348,3 +345,114 @@ void acknowledgement_recv_handler(void *arg) {
 //     struct capref ram_cap = *((struct capref *)arg[1]);
 //     lmp_chan_send2(chan, LMP_FLAG_SYNC, ram_cap, RPC_OK);
 // }
+
+/**
+ * \brief Request process manager to start a new process
+ * \arg name the name of the process that needs to be spawned (without a
+ *           path prefix)
+ * \arg newpid the process id of the newly spawned process
+ */
+errval_t aos_rpc_process_spawn(struct aos_rpc *chan, char *name,
+        coreid_t core, domainid_t *newpid) {
+    if (RPC_DEBUG_SPAWN) {
+        printf("Entering aos_rpc_process_spawn\n");
+        printf("name: %p\n", name);
+        printf("name: %s\n", name);
+        printf("core: %d\n", core);
+        if (newpid != NULL) {
+            printf("newpid: %p\n", newpid);
+            printf("newpid: %d\n", *newpid);
+        }
+    }
+    
+    uintptr_t args[4];
+    args[0] = (uintptr_t) chan;
+    args[1] = (uintptr_t) name;
+    args[2] = (uintptr_t) core;
+    args[3] = (uintptr_t) newpid;
+    
+    lmp_chan_register_send(&chan->channel, chan->ws, MKCLOSURE((void *) spawn_send_handler, args));
+ 
+    lmp_chan_register_recv(&chan->channel, chan->ws, MKCLOSURE((void *) spawn_recv_handler, args));
+ 
+    event_dispatch(chan->ws);
+
+    if (RPC_DEBUG_SPAWN)
+        printf("Exiting aos_rpc_process_spawn\n");
+    return SYS_ERR_OK;
+}
+
+void spawn_send_handler(void *args)
+{
+    if (RPC_DEBUG_SPAWN)
+        printf("Entering spawn_send_handler\n");
+    
+    uintptr_t *uargs = (uintptr_t *)args;
+    struct aos_rpc *rpc = (struct aos_rpc *) uargs[0];
+    char *name = (char *) uargs[1];
+    coreid_t core = (coreid_t) uargs[2];
+    domainid_t *newpid = (domainid_t *) uargs[3];
+ 
+    if (RPC_DEBUG_SPAWN) {
+        printf("spawn send handler args: \n");
+        printf("name: %p\n", name);
+        printf("name: %s\n", name);
+        printf("core: %d\n", core);
+        if (newpid != NULL) {
+            printf("newpid: %p\n", newpid);
+            printf("newpid: %d\n", *newpid);
+        }
+    }
+    errval_t err;
+    err = lmp_chan_send4(&rpc->channel, LMP_FLAG_SYNC, rpc->channel.local_cap, RPC_SPAWN, 
+                         *name, core, *newpid);
+    assert(err_is_ok(err));
+    event_dispatch(rpc->ws);
+    
+    if (RPC_DEBUG_SPAWN)
+        printf("Exiting spawn_send_handler\n");
+}
+
+void spawn_recv_handler(void *args)
+{
+    if (RPC_DEBUG_SPAWN)
+        printf("Entering spawn_recv_handler\n");
+
+    uintptr_t *uargs = (uintptr_t *)args;
+    struct aos_rpc* rpc = (struct aos_rpc*) uargs[0];
+    struct lmp_recv_msg msg = LMP_RECV_MSG_INIT;
+    struct capref recv_cap;
+    
+    errval_t err = lmp_chan_recv(&rpc->channel, &msg, &recv_cap);
+    assert(err_is_ok(err));
+    assert(msg.buf.msglen > 0);
+    assert(msg.words[0] == RPC_OK);
+    
+    domainid_t *newpid = (domainid_t *) uargs[3];
+    *newpid = msg.words[1];
+    if (RPC_DEBUG_SPAWN) {
+        if (newpid != NULL) {
+            printf("newpid: %p\n", newpid);
+            printf("newpid: %d\n", *newpid);
+        }
+        printf("msg.words[1]: %d\n", (domainid_t) msg.words[1]);
+    }
+    if (RPC_DEBUG_SPAWN)
+        printf("Exiting spawn_recv_handler\n");
+}
+
+errval_t aos_rpc_process_get_name(struct aos_rpc *chan, domainid_t pid,
+                                  char **name)
+{
+    // TODO (milestone 5): implement name lookup for process given a process
+    // id
+    return SYS_ERR_OK;
+}
+
+errval_t aos_rpc_process_get_all_pids(struct aos_rpc *chan,
+                                      domainid_t **pids, size_t *pid_count)
+{
+    // TODO (milestone 5): implement process id discovery
+    return SYS_ERR_OK;
+}
+

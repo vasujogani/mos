@@ -21,6 +21,7 @@
 #include <aos/dispatcher_arch.h>
 #include <aos/aos_rpc.h>
 #include <aos/paging.h>
+#include <aos/pid.h>
 #include <spawn/spawn.h>
 
 #include <mm/mm.h>
@@ -28,6 +29,7 @@
 
 coreid_t my_core_id;
 struct bootinfo *bi;
+// domainid_t next_pid = 0;
 
 struct client_data {
     struct lmp_chan lc;
@@ -39,16 +41,29 @@ struct client_data {
 
 struct client_data* clients = NULL;
  
- 
+// struct pid_node {
+//     char *name;
+//     domainid_t pid;
+//     coreid_t core;
+//     struct pid_node *next; 
+// };
+// 
+// struct pid_node* pid_list = NULL;
 
 void handshake_recv_handler(struct lmp_chan *lc, struct capref recv_cap);
 void acknowledgement_send_handler(void *arg);
-void number_receive_handler(struct lmp_chan *lc, uintptr_t value, struct client_data *clients);
+void number_receive_handler(struct lmp_chan *lc, uintptr_t value, struct client_data *data);
 void generic_recv_handler(void *arg);
-void ram_cap_handler(struct lmp_chan *lc, size_t requested_size, struct client_data *clients);
+void ram_cap_handler(struct lmp_chan *lc, size_t requested_size, struct client_data *data);
 void memory_send_handler(void *arg);
 struct client_data* find_client(struct capref* cap);
+// domainid_t find_pid(char *name);
+// char *find_name(domainid_t pid);
 void add_client(struct client_data *client);
+// void add_pid(char *name, coreid_t core);
+void process_spawn_handler(struct lmp_chan *lc, char *name, coreid_t core, domainid_t *newpid,
+struct client_data *data);
+void pid_send_handler(void *arg);
 
 
 struct client_data* find_client(struct capref* cap) {
@@ -68,6 +83,17 @@ struct client_data* find_client(struct capref* cap) {
     return to_ret;
 }
 
+// char *find_name(domainid_t pid) {
+//     struct pid_node *current = pid_list;
+//     while (current != NULL && current->pid != pid) {
+//         current = current->next;
+//     }
+//     if (current != NULL) {
+//         return current->name;
+//     }
+//     return NULL;
+// }
+
 void add_client(struct client_data *client) {
     if (clients == NULL) {
         clients = client;
@@ -76,6 +102,20 @@ void add_client(struct client_data *client) {
         clients = client;
     }
 }
+
+// void add_pid(char *name, coreid_t core) {
+//     struct pid_node *pid = malloc(sizeof(struct pid_node));
+//     pid->pid = next_pid++;
+//     pid->core = core;
+//     pid->name = name;
+// 
+//     if (pid_list == NULL) {
+//         pid_list = pid;
+//     } else {
+//         pid->next = pid_list;
+//         pid_list = pid;
+//     }
+// }
 
 int main(int argc, char *argv[])
 {
@@ -127,6 +167,9 @@ int main(int argc, char *argv[])
     err = lmp_chan_alloc_recv_slot(&lc);
     err = lmp_chan_register_recv(&lc, get_default_waitset(), MKCLOSURE(generic_recv_handler, &lc));
 
+    add_pid("init", my_core_id);
+
+    add_pid("memeater", my_core_id);
     spawn_load_by_name("memeater", (struct spawninfo *) malloc(sizeof(struct spawninfo)));
 
     debug_printf("Message handler loop\n");
@@ -165,6 +208,10 @@ void generic_recv_handler(void *arg) {
             case RPC_MEMORY:
                 ram_cap_handler(lc, (size_t)msg.words[1], client);
                 break;
+            case RPC_SPAWN:
+                // process_spawn_handler(lc, (char *) msg.words[1], )
+                process_spawn_handler(lc, (char *) &msg.words[1], (coreid_t) msg.words[2],
+                                      (domainid_t *) &msg.words[3], client);
         }
     }
 
@@ -225,5 +272,43 @@ void memory_send_handler(void *arg) {
     struct capref ram_cap = *((struct capref *)uarg[1]);
 
     errval_t err = lmp_chan_send1(lc, LMP_SEND_FLAGS_DEFAULT, ram_cap, RPC_OK);
+    assert(err_is_ok(err));
+}
+
+void process_spawn_handler(struct lmp_chan *lc, char *name, coreid_t core, domainid_t *newpid, struct client_data *data) {
+
+    // TODO(M5): Use the core arg
+    // TODO(M3): Add the process name and newpid to the pid list
+    if (RPC_DEBUG_SPAWN) 
+    {
+        printf("Entering process_spawn_handler\n");
+        printf("process name: %p\n", name);
+        printf("process name: %s\n", name);
+        printf("core: %d\n", core);
+        printf("newpid: %p\n", newpid);
+        printf("newpid: %d\n", *newpid);
+    }
+
+    // Not yet implemented
+    assert(false);
+    *newpid = add_pid(name, core);
+    errval_t err;
+    err = spawn_load_by_name(name, (struct spawninfo *) malloc(sizeof(struct spawninfo)));
+    assert(err_is_ok(err));
+    
+    uintptr_t uargs[2];
+    uargs[0] = (uintptr_t) &data->lc;
+    uargs[1] = (uintptr_t) newpid;
+    
+    err = lmp_chan_register_send(&data->lc, get_default_waitset(), MKCLOSURE(pid_send_handler, uargs));
+    event_dispatch(get_default_waitset());
+}
+
+void pid_send_handler(void *arg) {
+    uintptr_t *uarg = (uintptr_t *)arg;
+    struct lmp_chan *lc = (struct lmp_chan *)uarg[0];
+    domainid_t *newpid = (domainid_t *) uarg[1];
+
+    errval_t err = lmp_chan_send2(lc, LMP_SEND_FLAGS_DEFAULT, NULL_CAP, RPC_OK, *newpid);
     assert(err_is_ok(err));
 }
