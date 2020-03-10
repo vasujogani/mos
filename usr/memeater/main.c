@@ -19,6 +19,7 @@
 #include <aos/aos_rpc.h>
 #include <aos/waitset.h>
 #include <aos/paging.h>
+#include <spawn/spawn.h>
 
 static struct aos_rpc init_rpc;
 
@@ -31,78 +32,78 @@ static struct aos_rpc init_rpc;
 //                   "occaecat cupidatat non proident, sunt in culpa qui officia "
 //                   "deserunt mollit anim id est laborum.";
 
-static errval_t request_and_map_memory(void)
-{
-    errval_t err;
+// static errval_t request_and_map_memory(void)
+// {
+//     errval_t err;
 
-    size_t bytes;
-    struct frame_identity id;
-    debug_printf("testing memory server...\n");
+//     size_t bytes;
+//     struct frame_identity id;
+//     debug_printf("testing memory server...\n");
 
-    struct paging_state *pstate = get_current_paging_state();
+//     struct paging_state *pstate = get_current_paging_state();
 
-    debug_printf("obtaining cap of %" PRIu32 " bytes...\n", BASE_PAGE_SIZE);
+//     debug_printf("obtaining cap of %" PRIu32 " bytes...\n", BASE_PAGE_SIZE);
 
-    struct capref cap1;
-    err = aos_rpc_get_ram_cap(&init_rpc, BASE_PAGE_SIZE, &cap1, &bytes);
-    if (err_is_fail(err)) {
-        DEBUG_ERR(err, "could not get BASE_PAGE_SIZE cap\n");
-        return err;
-    }
-    struct capref cap1_frame;
-    err = slot_alloc(&cap1_frame);
-    assert(err_is_ok(err));
+//     struct capref cap1;
+//     err = aos_rpc_get_ram_cap(&init_rpc, BASE_PAGE_SIZE, &cap1, &bytes);
+//     if (err_is_fail(err)) {
+//         DEBUG_ERR(err, "could not get BASE_PAGE_SIZE cap\n");
+//         return err;
+//     }
+//     struct capref cap1_frame;
+//     err = slot_alloc(&cap1_frame);
+//     assert(err_is_ok(err));
 
-    err = cap_retype(cap1_frame, cap1, 0, ObjType_Frame, BASE_PAGE_SIZE, 1);
-    if (err_is_fail(err)) {
-        DEBUG_ERR(err, "could not retype RAM cap to frame cap\n");
-        return err;
-    }
-    err = invoke_frame_identify(cap1_frame, &id);
-    assert(err_is_ok(err));
-    printf("HEARE\n");
-    void *buf1;
-    err = paging_map_frame(pstate, &buf1, BASE_PAGE_SIZE, cap1_frame, NULL, NULL);
-    if (err_is_fail(err)) {
-        DEBUG_ERR(err, "could not get BASE_PAGE_SIZE cap\n");
-        return err;
-    }
+//     err = cap_retype(cap1_frame, cap1, 0, ObjType_Frame, BASE_PAGE_SIZE, 1);
+//     if (err_is_fail(err)) {
+//         DEBUG_ERR(err, "could not retype RAM cap to frame cap\n");
+//         return err;
+//     }
+//     err = invoke_frame_identify(cap1_frame, &id);
+//     assert(err_is_ok(err));
+//     printf("HEARE\n");
+//     void *buf1;
+//     err = paging_map_frame(pstate, &buf1, BASE_PAGE_SIZE, cap1_frame, NULL, NULL);
+//     if (err_is_fail(err)) {
+//         DEBUG_ERR(err, "could not get BASE_PAGE_SIZE cap\n");
+//         return err;
+//     }
 
-    debug_printf("got frame: 0x%" PRIxGENPADDR " mapped at %p\n", id.base, buf1);
+//     debug_printf("got frame: 0x%" PRIxGENPADDR " mapped at %p\n", id.base, buf1);
 
-    debug_printf("performing memset.\n");
-    memset(buf1, 0x00, BASE_PAGE_SIZE);
+//     debug_printf("performing memset.\n");
+//     memset(buf1, 0x00, BASE_PAGE_SIZE);
 
 
 
-    debug_printf("obtaining cap of %" PRIu32 " bytes using frame alloc...\n",
-                 LARGE_PAGE_SIZE);
+//     debug_printf("obtaining cap of %" PRIu32 " bytes using frame alloc...\n",
+//                  LARGE_PAGE_SIZE);
 
-    struct capref cap2;
-    err = frame_alloc(&cap2, LARGE_PAGE_SIZE, &bytes);
-    if (err_is_fail(err)) {
-        DEBUG_ERR(err, "could not get BASE_PAGE_SIZE cap\n");
-        return err;
-    }
+//     struct capref cap2;
+//     err = frame_alloc(&cap2, LARGE_PAGE_SIZE, &bytes);
+//     if (err_is_fail(err)) {
+//         DEBUG_ERR(err, "could not get BASE_PAGE_SIZE cap\n");
+//         return err;
+//     }
 
-    err = invoke_frame_identify(cap2, &id);
-    assert(err_is_ok(err));
+//     err = invoke_frame_identify(cap2, &id);
+//     assert(err_is_ok(err));
 
-    void *buf2;
-    err = paging_map_frame(pstate, &buf2, LARGE_PAGE_SIZE, cap2, NULL, NULL);
-    if (err_is_fail(err)) {
-        DEBUG_ERR(err, "could not get BASE_PAGE_SIZE cap\n");
-        return err;
-    }
+//     void *buf2;
+//     err = paging_map_frame(pstate, &buf2, LARGE_PAGE_SIZE, cap2, NULL, NULL);
+//     if (err_is_fail(err)) {
+//         DEBUG_ERR(err, "could not get BASE_PAGE_SIZE cap\n");
+//         return err;
+//     }
 
-    debug_printf("got frame: 0x%" PRIxGENPADDR " mapped at %p\n", id.base, buf1);
+//     debug_printf("got frame: 0x%" PRIxGENPADDR " mapped at %p\n", id.base, buf1);
 
-    debug_printf("performing memset.\n");
-    memset(buf2, 0x00, LARGE_PAGE_SIZE);
+//     debug_printf("performing memset.\n");
+//     memset(buf2, 0x00, LARGE_PAGE_SIZE);
+//     printf("YESSSS\n");
+//     return SYS_ERR_OK;
 
-    return SYS_ERR_OK;
-
-}
+// }
 
 // static errval_t test_basic_rpc(void)
 // {
@@ -153,11 +154,15 @@ int main(int argc, char *argv[])
     //      USER_PANIC_ERR(err, "failure in testing basic RPC\n");
     // }
 
-    err = request_and_map_memory();
-    if (err_is_fail(err)) {
-        USER_PANIC_ERR(err, "could not request and map memory\n");
-    }
+    // err = request_and_map_memory();
+    // if (err_is_fail(err)) {
+        // USER_PANIC_ERR(err, "could not request and map memory\n");
+    // }
 
+    // err = aos_rpc_process_spawn(&init_rpc, "hello", 0, NULL);
+    // if (err_is_fail(err)) {
+    //     USER_PANIC_ERR(err, "could not spawn process\n");
+    // }
 
     // /* test printf functionality */
     // debug_printf("testing terminal printf function...\n");

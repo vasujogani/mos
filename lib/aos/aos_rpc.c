@@ -147,13 +147,13 @@ errval_t aos_rpc_get_ram_cap(struct aos_rpc *chan, size_t request_bytes,
     lmp_chan_alloc_recv_slot(&chan->channel);
 
     lmp_chan_register_send(&chan->channel, chan->ws, MKCLOSURE((void *) ram_cap_send_handler, args));
- 
+    printf("ALLOCATED SEND HANDLER\n");
     lmp_chan_register_recv(&chan->channel, chan->ws, MKCLOSURE((void *) ram_cap_recv_handler, args));
- 
+    printf("ALLOCATED RECEIVE HANDLER\n");
     event_dispatch(chan->ws);
-    
-    *ret_bytes = request_bytes;
- 
+    if (ret_bytes) {
+        *ret_bytes = request_bytes;
+    }
     return SYS_ERR_OK;
 }
 
@@ -213,7 +213,6 @@ errval_t aos_rpc_serial_putchar(struct aos_rpc *chan, char c)
 errval_t aos_rpc_process_spawn(struct aos_rpc *chan, char *name,
                                coreid_t core, domainid_t *newpid)
 {
-    // TODO (milestone 5): implement spawn new process rpc
     return SYS_ERR_OK;
 }
 
@@ -274,10 +273,8 @@ errval_t aos_rpc_init(struct aos_rpc *rpc)
     init_chan.remote_cap = cap_initep;
 
     rpc->ws = get_default_waitset();
+    assert(rpc->ws != NULL);
     rpc->channel = init_chan;
-    // struct waitset *ws = get_default_waitset();
-    // err = lmp_chan_accept(&rpc-
-    // err = lmp_chan_
     err = lmp_chan_alloc_recv_slot(&rpc->channel);
     err = lmp_chan_register_recv(&rpc->channel,rpc->ws, MKCLOSURE((void*)acknowledgement_recv_handler, rpc));
     err = lmp_chan_register_send(&rpc->channel,rpc->ws, MKCLOSURE((void*)handshake_send_handler, rpc));

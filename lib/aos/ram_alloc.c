@@ -19,7 +19,6 @@
 /* remote (indirect through a channel) version of ram_alloc, for most domains */
 static errval_t ram_alloc_remote(struct capref *ret, size_t size, size_t alignment)
 {
-    printf("CALLING RAM ALLOC\n");
     struct aos_rpc *mem_client = get_init_rpc();
     return aos_rpc_get_ram_cap(mem_client, size, ret, NULL);
 }
