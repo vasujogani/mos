@@ -414,6 +414,16 @@ void spawn_recv_handler(void *args)
     assert(err_is_ok(err));
     assert(msg.buf.msglen > 0);
     assert(msg.words[0] == RPC_OK);
+    
+    domainid_t *newpid = (domainid_t *) uargs[3];
+    *newpid = msg.words[1];
+    if (RPC_DEBUG_SPAWN) {
+        if (newpid != NULL) {
+            printf("newpid: %p\n", newpid);
+            printf("newpid: %d\n", *newpid);
+        }
+        printf("msg.words[1]: %d\n", (domainid_t) msg.words[1]);
+    }
     if (RPC_DEBUG_SPAWN)
         printf("Exiting spawn_recv_handler\n");
 }
