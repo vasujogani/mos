@@ -39,6 +39,7 @@
                              "lmp_endpoints.c",
                              "morecore.c",
                              "paging.c",
+                             "pid.c",
                              "ram_alloc.c",
                              "slab.c",
                              "sys_debug.c",

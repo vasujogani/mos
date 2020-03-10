@@ -24,6 +24,9 @@
 #define RPC_NUMBER 4 << 2
 #define RPC_PUTCHAR 5 << 2
 #define RPC_STRING 6 << 2 
+#define RPC_SPAWN 7 << 2
+
+#define RPC_DEBUG_SPAWN 1
 
 struct aos_rpc {
     // TODO: add state for your implementation
