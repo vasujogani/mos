@@ -16,11 +16,28 @@
 
 #include <stdio.h>
 
+#include <aos/aos_rpc.h>
+
+static struct aos_rpc init_rpc;
+
 int main(int argc, char *argv[])
 {
+	errval_t err;
+ 
+    // debug_printf("hello started....\n");
+ 
+    err = aos_rpc_init(&init_rpc);
+    if (err_is_fail(err)) {
+        USER_PANIC_ERR(err, "could not initialize RPC\n");
+    }
+
     printf("Hello, world! from userspace\n");
-    for (int i = 0; i < argc; i++) {
-        printf("%s\n", argv[i]);
+    for (int i = 0; i < 5; i++) {
+        err = aos_rpc_send_number(&init_rpc, i);
+        if (err_is_fail(err)) {
+	        DEBUG_ERR(err, "could not send a number from hello\n");
+	        return err;
+	    }
     }
     return 0;
 }
