@@ -456,7 +456,12 @@ errval_t aos_rpc_process_get_all_pids(struct aos_rpc *chan,
 }
 
 uint32_t get_time(void) {
-    uint32_t time = 0;
-    __asm__ volatile ("mcr p15, 0, %0, c9, c13, 0" : "=r"(time));
+    volatile uint32_t time = 0;
+    __asm__ volatile ("mrc p15, 0, %0, c9, c13, 0" : "=r" (time));
+
+    // __asm__ volatile ("mrc p15, 0, %%r0, c9, c13, 0" : : : "%r0" );
+    // //value of r0 should be clock cycles now
+    // __asm__ volatile ("mov %0, %%r0" : "=r" (time) : : "%r0" );
+
     return time;
 }
