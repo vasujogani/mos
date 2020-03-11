@@ -88,6 +88,15 @@ static size_t dummy_terminal_read(char *buf, size_t len)
     return len;
 }
 
+static size_t rpc_terminal_write(const char *buf, size_t len) {
+    if (len) {
+        aos_rpc_send_string(get_init_rpc(), buf);
+        return len;
+    }
+    return 0;
+}
+
+
 /* Set libc function pointers */
 void barrelfish_libc_glue_init(void)
 {
@@ -95,7 +104,7 @@ void barrelfish_libc_glue_init(void)
     // what we need for that
     // TODO: change these to use the user-space serial driver if possible
     _libc_terminal_read_func = dummy_terminal_read;
-    _libc_terminal_write_func = syscall_terminal_write;
+    _libc_terminal_write_func = init_domain ? syscall_terminal_write : rpc_terminal_write;
     _libc_exit_func = libc_exit;
     _libc_assert_func = libc_assert;
     /* morecore func is setup by morecore_init() */
