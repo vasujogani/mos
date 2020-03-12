@@ -25,6 +25,7 @@ void recv_string_handler(void* args);
 void putchar_send_handler(void *arg);
 void spawn_send_handler(void *args);
 void spawn_recv_handler(void *args);
+void handshake_recv_client_handler(void *arg);
 uint32_t get_time(void);
 
 
@@ -36,7 +37,7 @@ void number_send_handler(void *arg)
     uintptr_t val = uargs[1];
  
     errval_t err;
-    err = lmp_chan_send2(&rpc->channel, LMP_FLAG_SYNC, rpc->channel.local_cap, RPC_NUMBER, val);
+    err = lmp_chan_send3(&rpc->channel, LMP_FLAG_SYNC, NULL_CAP, RPC_NUMBER, rpc->clientdata_pointer, val);
     assert(!err_is_fail(err));
     event_dispatch(rpc->ws);
 }
@@ -47,8 +48,7 @@ errval_t aos_rpc_send_number(struct aos_rpc *chan, uintptr_t val)
     args[0] = (uintptr_t) chan;
     args[1] = val;
 
-    errval_t err = lmp_chan_alloc_recv_slot(&chan->channel);
-    err = lmp_chan_register_send(&chan->channel, chan->ws, MKCLOSURE(number_send_handler, args));
+    errval_t err = lmp_chan_register_send(&chan->channel, chan->ws, MKCLOSURE(number_send_handler, args));
     err = lmp_chan_register_recv(&chan->channel, chan->ws, MKCLOSURE(acknowledgement_recv_handler, chan));
 
     event_dispatch(chan->ws);
@@ -58,7 +58,7 @@ errval_t aos_rpc_send_number(struct aos_rpc *chan, uintptr_t val)
 void send_string_handler(void* args) {
     uintptr_t *uargs = (uintptr_t *) args;
     struct aos_rpc *rpc = (struct aos_rpc *) uargs[0];
-    errval_t err = lmp_chan_send9(&rpc->channel, LMP_FLAG_SYNC, rpc->channel.local_cap, RPC_STRING, uargs[1], uargs[2], uargs[3], uargs[4], uargs[5], uargs[6], uargs[7], uargs[8]);
+    errval_t err = lmp_chan_send9(&rpc->channel, LMP_FLAG_SYNC, NULL_CAP, RPC_STRING, uargs[1], uargs[2], uargs[3], uargs[4], uargs[5], uargs[6], uargs[7], uargs[8]);
     assert(err_is_ok(err));
 }
 
@@ -82,9 +82,10 @@ errval_t aos_rpc_send_string(struct aos_rpc *chan, const char *string)
     // uint32_t start = get_time();
     uint32_t uargs[9];
     uargs[0] = (uint32_t) chan;
+    uargs[1] = chan->clientdata_pointer;
  
     uint32_t len = strlen(string) + 1;
-    int count = 1;
+    int count = 2;
     uargs[count] = len;
     for (int i = 0; i <= len; i++) {
         if (i % 4 == 0) {
@@ -101,12 +102,12 @@ errval_t aos_rpc_send_string(struct aos_rpc *chan, const char *string)
            
             event_dispatch(chan->ws);
             event_dispatch(chan->ws);
-            count = 1;
-            uargs[count] = 28;
+            count = 2;
+            uargs[count] = 24;
         }
     }
-    if (len%28 != 0) {
-        uargs[1] = len%28;
+    if (len%24 != 0) {
+        uargs[2] = len%24;
             // assert(false);
             // assert(chan->ws);
         errval_t err = lmp_chan_register_send(&chan->channel, chan->ws, MKCLOSURE((void *) send_string_handler, uargs));
@@ -134,7 +135,7 @@ void ram_cap_send_handler(void *args)
     size_t *bytes = (size_t *) uargs[1];
  
     errval_t err;
-    err = lmp_chan_send2(&rpc->channel, LMP_FLAG_SYNC, rpc->channel.local_cap, RPC_MEMORY, *bytes);
+    err = lmp_chan_send3(&rpc->channel, LMP_FLAG_SYNC, NULL_CAP, RPC_MEMORY, rpc->clientdata_pointer, *bytes);
     assert(err_is_ok(err));
     event_dispatch(rpc->ws);
 }
@@ -228,7 +229,7 @@ void putchar_send_handler(void *arg) {
     struct aos_rpc *rpc = (struct aos_rpc *) args[0];
     char* to_put = (char*) args[1];
     errval_t err;
-    err = lmp_chan_send2(&rpc->channel, LMP_FLAG_SYNC, rpc->channel.local_cap, RPC_PUTCHAR, *to_put);
+    err = lmp_chan_send3(&rpc->channel, LMP_FLAG_SYNC, NULL_CAP, RPC_PUTCHAR, rpc->clientdata_pointer, *to_put);
     if (err_is_fail(err)) {
         printf("Error\n");
     }
@@ -314,7 +315,7 @@ errval_t aos_rpc_init(struct aos_rpc *rpc)
     assert(rpc->ws != NULL);
     rpc->channel = init_chan;
     err = lmp_chan_alloc_recv_slot(&rpc->channel);
-    err = lmp_chan_register_recv(&rpc->channel,rpc->ws, MKCLOSURE((void*)acknowledgement_recv_handler, rpc));
+    err = lmp_chan_register_recv(&rpc->channel,rpc->ws, MKCLOSURE((void*)handshake_recv_client_handler, rpc));
     err = lmp_chan_register_send(&rpc->channel,rpc->ws, MKCLOSURE((void*)handshake_send_handler, rpc));
     // loop till success?
     event_dispatch(rpc->ws);
@@ -340,6 +341,20 @@ void handshake_send_handler(void *arg) {
     err = lmp_chan_send1(&chan, LMP_FLAG_SYNC, chan.local_cap, RPC_HANDSHAKE);
 
     event_dispatch(rpc->ws);
+}
+
+void handshake_recv_client_handler(void *arg) {
+    // assert(false);
+    errval_t err;
+    
+    struct aos_rpc *rpc = (struct aos_rpc *) arg;
+    struct lmp_chan chan = rpc->channel;
+    struct lmp_recv_msg msg = LMP_RECV_MSG_INIT;
+    // struct capref recv_cap;
+    err = lmp_chan_recv(&chan, &msg, NULL);
+    assert(msg.buf.msglen == 2 && msg.words[0] == RPC_OK);
+    rpc->clientdata_pointer = msg.words[1];
+
 }
 
 void acknowledgement_recv_handler(void *arg) {
@@ -443,7 +458,7 @@ void spawn_send_handler(void *args)
         debug_printf("core: %d\n", core);
     }
     errval_t err;
-    err = lmp_chan_send2(&rpc->channel, LMP_FLAG_SYNC, rpc->channel.local_cap, RPC_SPAWN, core);
+    err = lmp_chan_send3(&rpc->channel, LMP_FLAG_SYNC, NULL_CAP, RPC_SPAWN, rpc->clientdata_pointer, core);
 
     assert(err_is_ok(err));
     event_dispatch(rpc->ws);
@@ -468,7 +483,9 @@ void spawn_recv_handler(void *args)
     assert(msg.words[0] == RPC_OK);
     debug_printf("after receive\n");
     domainid_t *newpid = (domainid_t *) uargs[2];
-    *newpid = msg.words[1];
+    if (newpid) {
+        *newpid = msg.words[1];
+    }
     if (RPC_DEBUG_SPAWN) {
         if (newpid != NULL) {
             debug_printf("newpid: %p\n", newpid);

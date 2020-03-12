@@ -142,8 +142,8 @@ static errval_t test_basic_rpc(void)
 
 void spawn_many_hellos (void) {
     
-    domainid_t pids[5];
-    for (int i = 0; i < 5; ++i)
+    domainid_t pids[20];
+    for (int i = 0; i < 20; ++i)
     {
         // add request memory
         //TODO change to spawn rpc
@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
     //     USER_PANIC_ERR(err, "could not spawn process\n");
     // }
 
-    // spawn_many_hellos();
+    spawn_many_hellos();
 
     /* test printf functionality */
     debug_printf("testing terminal printf function...\n");

@@ -45,35 +45,36 @@ struct client_data {
 struct client_data* clients = NULL;
  
 void handshake_recv_handler(struct lmp_chan *lc, struct capref recv_cap);
+void handshake_send_client_handler(void *arg);
 void acknowledgement_send_handler(void *arg);
 void number_receive_handler(struct lmp_chan *lc, uintptr_t value, struct client_data *data);
 void generic_recv_handler(void *arg);
 void ram_cap_handler(struct lmp_chan *lc, size_t requested_size, struct client_data *data);
 void memory_send_handler(void *arg);
-struct client_data* find_client(struct capref* cap);
+// struct client_data* find_client(struct capref* cap);
 void add_client(struct client_data *client);
 void process_spawn_handler(struct lmp_chan *lc, coreid_t core, struct client_data *data);
 void pid_send_handler(void *arg);
-void string_recv_handler(void *args, struct lmp_recv_msg *msg, struct capref *cap);
+void string_recv_handler(void *args, struct lmp_recv_msg *msg, struct client_data *c);
 
 void test_many_spawns(void);
 
 
-struct client_data* find_client(struct capref* cap) {
-    struct capability capp; // to store info
-    errval_t err = debug_cap_identify(*cap, &capp);
+// struct client_data* find_client(struct capref* cap) {
+//     struct capability capp; // to store info
+//     errval_t err = debug_cap_identify(*cap, &capp);
 
-    assert(err_is_ok(err));
-    struct client_data* to_ret = clients;
-    while (to_ret) {
-        if (to_ret->id_cap.u.endpoint.listener == capp.u.endpoint.listener && to_ret->id_cap.u.endpoint.epoffset == capp.u.endpoint.epoffset) {
-            break;
-        }
-        to_ret = to_ret->next;
-    }
+//     assert(err_is_ok(err));
+//     struct client_data* to_ret = clients;
+//     while (to_ret) {
+//         if (to_ret->id_cap.u.endpoint.listener == capp.u.endpoint.listener && to_ret->id_cap.u.endpoint.epoffset == capp.u.endpoint.epoffset) {
+//             break;
+//         }
+//         to_ret = to_ret->next;
+//     }
  
-    return to_ret;
-}
+//     return to_ret;
+// }
 
 void add_client(struct client_data *client) {
     if (clients == NULL) {
@@ -176,25 +177,24 @@ void generic_recv_handler(void *arg) {
         handshake_recv_handler(lc, recv_cap);
     } else {
         // find the correct channel to execute on
-        struct client_data *client = find_client(&recv_cap);
+        struct client_data *client = (struct client_data *)msg.words[1];
         switch (messageType) {
             case RPC_NUMBER:
-                number_receive_handler(lc, msg.words[1], client);
+                number_receive_handler(lc, msg.words[2], client);
                 break;
             case RPC_STRING:
-                string_recv_handler(arg, &msg, &recv_cap);
+                string_recv_handler(arg, &msg, client);
                 break;
             case RPC_MEMORY:
-                ram_cap_handler(lc, (size_t)msg.words[1], client);
+                ram_cap_handler(lc, (size_t)msg.words[2], client);
                 break;
             case RPC_SPAWN:
-                process_spawn_handler(lc, (coreid_t) msg.words[1], client);
+                process_spawn_handler(lc, (coreid_t) msg.words[2], client);
         }
     }
 
     // reset the callback for this handshake channel
     err = lmp_chan_register_recv(lc, get_default_waitset(), MKCLOSURE(generic_recv_handler, lc));
-    err = lmp_chan_alloc_recv_slot(lc);
     // printf("SLOT NUM NOW %d\n", lc->endpoint->recv_slot.slot);
 }
 
@@ -214,10 +214,16 @@ void handshake_recv_handler(struct lmp_chan *lc, struct capref recv_cap) {
     client->next = NULL;
     debug_cap_identify(recv_cap, &client->id_cap);
     add_client(client);
+    err = lmp_chan_alloc_recv_slot(lc);
 
-    lmp_chan_register_send(&new_chan, get_default_waitset(), MKCLOSURE((void *)acknowledgement_send_handler, &new_chan));
+    lmp_chan_register_send(&new_chan, get_default_waitset(), MKCLOSURE((void *)handshake_send_client_handler, client));
 
     event_dispatch(get_default_waitset());
+}
+
+void handshake_send_client_handler(void *arg) {
+    struct lmp_chan *lc = &((struct client_data *)arg)->lc;
+    lmp_chan_send2(lc, LMP_SEND_FLAGS_DEFAULT, NULL_CAP, RPC_OK, (uintptr_t)arg);
 }
 
 void acknowledgement_send_handler(void *arg) {
@@ -294,20 +300,18 @@ void pid_send_handler(void *arg) {
     assert(err_is_ok(err));
 }
 
-void string_recv_handler(void *args, struct lmp_recv_msg *msg, struct capref *cap) {
+void string_recv_handler(void *args, struct lmp_recv_msg *msg, struct client_data *c) {
     // printf("String received\n");
-    struct client_data *c = find_client(cap);
     assert(c);
-    int len = msg->words[1];
+    int len = msg->words[2];
     if (c->buf == NULL) {
         c->buf = (char *) malloc(len * sizeof(char));
         c->buf_idx = 0;
         c->len = len;
     }
-    int end = len < 28 ? len: 28;
+    int end = len < 24 ? len: 24;
     for (int i = 0; i < end; i++) {
- 
-        uint32_t w = (uint32_t) msg->words[2 + i / 4];
+        uint32_t w = (uint32_t) msg->words[3 + i / 4];
         c->buf[c->buf_idx++] = (char) (w >> (8 * (i % 4)));
     }
     if (c->buf_idx == c->len) {
@@ -317,7 +321,7 @@ void string_recv_handler(void *args, struct lmp_recv_msg *msg, struct capref *ca
         c->latest_len = c->len;
         c->buf_idx = 0;
         c->len = 0;
-        printf("String is : %s\n", c->buf);
+        debug_printf("String is : %s\n", c->buf);
         c->buf = NULL;
     }
  
