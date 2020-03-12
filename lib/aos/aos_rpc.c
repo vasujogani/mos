@@ -145,6 +145,8 @@ void ram_cap_recv_handler(void *args) {
 errval_t aos_rpc_get_ram_cap(struct aos_rpc *chan, size_t request_bytes,
                              struct capref *retcap, size_t *ret_bytes)
 {
+    uint32_t start = get_time();
+    debug_printf("*************************************Time started: %u\n", start);
     // printf("in aos_rpc_get_ram_cap\n");
     // Fill in args 1. aos_rpc 2. request_bytes 3. retcap 4. ret_bytes
     uintptr_t args[3];
@@ -160,6 +162,9 @@ errval_t aos_rpc_get_ram_cap(struct aos_rpc *chan, size_t request_bytes,
     // printf("ALLOCATED SEND HANDLER\n");
     lmp_chan_register_recv(&chan->channel, chan->ws, MKCLOSURE((void *) ram_cap_recv_handler, args));
     // printf("ALLOCATED RECEIVE HANDLER\n");
+
+    uint32_t end = get_time();
+    debug_printf("*************************************Time end: %u\n", end);
     event_dispatch(chan->ws);
     if (ret_bytes) {
         *ret_bytes = request_bytes;
@@ -440,3 +445,13 @@ errval_t aos_rpc_process_get_all_pids(struct aos_rpc *chan,
     return SYS_ERR_OK;
 }
 
+uint32_t get_time(void) {
+    volatile uint32_t time = 0;
+    __asm__ volatile ("mrc p15, 0, %0, c9, c13, 0" : "=r" (time));
+
+    // __asm__ volatile ("mrc p15, 0, %%r0, c9, c13, 0" : : : "%r0" );
+    // //value of r0 should be clock cycles now
+    // __asm__ volatile ("mov %0, %%r0" : "=r" (time) : : "%r0" );
+
+    return time;
+}

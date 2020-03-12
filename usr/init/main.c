@@ -56,6 +56,9 @@ void process_spawn_handler(struct lmp_chan *lc, coreid_t core, struct client_dat
 void pid_send_handler(void *arg);
 void string_recv_handler(void *args, struct lmp_recv_msg *msg, struct capref *cap);
 
+void test_many_spawns(void);
+
+
 struct client_data* find_client(struct capref* cap) {
     struct capability capp; // to store info
     errval_t err = debug_cap_identify(*cap, &capp);
@@ -320,3 +323,10 @@ void string_recv_handler(void *args, struct lmp_recv_msg *msg, struct capref *ca
  
     lmp_chan_register_send(&c->lc, get_default_waitset(), MKCLOSURE((void *) acknowledgement_send_handler, &c->lc));
  }
+
+ void test_many_spawns(void) {
+    for (int i = 0; i < 10; ++i)
+    {
+        spawn_load_by_name("memeater", (struct spawninfo *) malloc(sizeof(struct spawninfo)));
+    }
+}
