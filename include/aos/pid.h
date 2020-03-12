@@ -16,6 +16,8 @@
 #ifndef _INIT_PID_H_
 #define _INIT_PID_H_
 
+#define DEBUG_PID 1
+
 struct pid_node {
     char *name;
     domainid_t pid;
@@ -24,7 +26,11 @@ struct pid_node {
 };
 
 // domainid_t find_pid(char *name);
+void init_pid(void);
 char *find_name(domainid_t pid);
 domainid_t add_pid(char *name, coreid_t core);
+void remove_pid(domainid_t pid);
+void debug_pid_lists(void);
+void test_pid(void);
 
 #endif /* _INIT_PID_H_ */

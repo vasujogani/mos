@@ -34,23 +34,16 @@ struct bootinfo *bi;
 struct client_data {
     struct lmp_chan lc;
     char* buf;
+    char* latest_buf;
     size_t buf_idx;
     struct capability id_cap;
     struct client_data *next;
     int len;
+    int latest_len;
 };
 
 struct client_data* clients = NULL;
  
-// struct pid_node {
-//     char *name;
-//     domainid_t pid;
-//     coreid_t core;
-//     struct pid_node *next; 
-// };
-// 
-// struct pid_node* pid_list = NULL;
-
 void handshake_recv_handler(struct lmp_chan *lc, struct capref recv_cap);
 void acknowledgement_send_handler(void *arg);
 void number_receive_handler(struct lmp_chan *lc, uintptr_t value, struct client_data *data);
@@ -58,16 +51,10 @@ void generic_recv_handler(void *arg);
 void ram_cap_handler(struct lmp_chan *lc, size_t requested_size, struct client_data *data);
 void memory_send_handler(void *arg);
 struct client_data* find_client(struct capref* cap);
-// domainid_t find_pid(char *name);
-// char *find_name(domainid_t pid);
 void add_client(struct client_data *client);
-// void add_pid(char *name, coreid_t core);
-// void process_spawn_handler(struct lmp_chan *lc, char *name, coreid_t core, domainid_t *newpid,
-// struct client_data *data);
-// void pid_send_handler(void *arg);
+void process_spawn_handler(struct lmp_chan *lc, coreid_t core, struct client_data *data);
+void pid_send_handler(void *arg);
 void string_recv_handler(void *args, struct lmp_recv_msg *msg, struct capref *cap);
-
-
 
 struct client_data* find_client(struct capref* cap) {
     struct capability capp; // to store info
@@ -85,17 +72,6 @@ struct client_data* find_client(struct capref* cap) {
     return to_ret;
 }
 
-// char *find_name(domainid_t pid) {
-//     struct pid_node *current = pid_list;
-//     while (current != NULL && current->pid != pid) {
-//         current = current->next;
-//     }
-//     if (current != NULL) {
-//         return current->name;
-//     }
-//     return NULL;
-// }
-
 void add_client(struct client_data *client) {
     if (clients == NULL) {
         clients = client;
@@ -104,20 +80,6 @@ void add_client(struct client_data *client) {
         clients = client;
     }
 }
-
-// void add_pid(char *name, coreid_t core) {
-//     struct pid_node *pid = malloc(sizeof(struct pid_node));
-//     pid->pid = next_pid++;
-//     pid->core = core;
-//     pid->name = name;
-// 
-//     if (pid_list == NULL) {
-//         pid_list = pid;
-//     } else {
-//         pid->next = pid_list;
-//         pid_list = pid;
-//     }
-// }
 
 int main(int argc, char *argv[])
 {
@@ -168,9 +130,21 @@ int main(int argc, char *argv[])
     err = lmp_chan_alloc_recv_slot(&lc);
     err = lmp_chan_register_recv(&lc, get_default_waitset(), MKCLOSURE(generic_recv_handler, &lc));
 
-    // add_pid("init", my_core_id);
+    init_pid();
+    if (DEBUG_PID)
+        debug_pid_lists();
+    add_pid("init", my_core_id);
+    debug_printf("my_core_id: %d\n", my_core_id);
 
-    // add_pid("memeater", my_core_id);
+    if (DEBUG_PID)
+        debug_pid_lists();
+
+    add_pid("memeater", my_core_id);
+    if (DEBUG_PID) {
+        debug_pid_lists();
+        test_pid();
+    }
+
     spawn_load_by_name("memeater", (struct spawninfo *) malloc(sizeof(struct spawninfo)));
 
     debug_printf("Message handler loop\n");
@@ -210,21 +184,19 @@ void generic_recv_handler(void *arg) {
             case RPC_MEMORY:
                 ram_cap_handler(lc, (size_t)msg.words[1], client);
                 break;
-            // case RPC_SPAWN:
-                // process_spawn_handler(lc, (char *) msg.words[1], )
-                // process_spawn_handler(lc, (char *) &msg.words[1], (coreid_t) msg.words[2],
-                                    //   (domainid_t *) &msg.words[3], client);
+            case RPC_SPAWN:
+                process_spawn_handler(lc, (coreid_t) msg.words[1], client);
         }
     }
 
     // reset the callback for this handshake channel
     err = lmp_chan_register_recv(lc, get_default_waitset(), MKCLOSURE(generic_recv_handler, lc));
     err = lmp_chan_alloc_recv_slot(lc);
-    printf("SLOT NUM NOW %d\n", lc->endpoint->recv_slot.slot);
+    // printf("SLOT NUM NOW %d\n", lc->endpoint->recv_slot.slot);
 }
 
 void handshake_recv_handler(struct lmp_chan *lc, struct capref recv_cap) {
-    printf("IN HANDSHAKE RECV\n");
+    // printf("IN HANDSHAKE RECV\n");
     // create new channel for communication
     struct lmp_chan new_chan;
     errval_t err = lmp_chan_accept(&new_chan, DEFAULT_LMP_BUF_WORDS, recv_cap);
@@ -234,6 +206,7 @@ void handshake_recv_handler(struct lmp_chan *lc, struct capref recv_cap) {
     struct client_data *client = malloc(sizeof(struct client_data));
     client->lc = new_chan;
     client->buf = NULL;
+    client->latest_buf = NULL;
     client->buf_idx = 0;
     client->next = NULL;
     debug_cap_identify(recv_cap, &client->id_cap);
@@ -245,14 +218,14 @@ void handshake_recv_handler(struct lmp_chan *lc, struct capref recv_cap) {
 }
 
 void acknowledgement_send_handler(void *arg) {
-    printf("IN ACKNOWLEDGE SEND\n");
+    // printf("IN ACKNOWLEDGE SEND\n");
     errval_t err;
     struct lmp_chan *lc = arg;
     err = lmp_chan_send1(lc, LMP_SEND_FLAGS_DEFAULT, NULL_CAP, RPC_OK);
 }
 
 void number_receive_handler(struct lmp_chan *lc, uintptr_t value, struct client_data *data) {
-    printf("Number received: %d\n", value);
+    // printf("Number received: %d\n", value);
     lmp_chan_register_send(&data->lc, get_default_waitset(), MKCLOSURE((void *)acknowledgement_send_handler, &data->lc));
 }
 
@@ -278,43 +251,45 @@ void memory_send_handler(void *arg) {
     assert(err_is_ok(err));
 }
 
-// void process_spawn_handler(struct lmp_chan *lc, char *name, coreid_t core, domainid_t *newpid, struct client_data *data) {
+void process_spawn_handler(struct lmp_chan *lc, coreid_t core, struct client_data *data) {
+    // TODO(M5): Use the core arg
 
-//     // TODO(M5): Use the core arg
-//     // TODO(M3): Add the process name and newpid to the pid list
-//     if (RPC_DEBUG_SPAWN) 
-//     {
-//         printf("Entering process_spawn_handler\n");
-//         printf("process name: %p\n", name);
-//         printf("process name: %s\n", name);
-//         printf("core: %d\n", core);
-//         printf("newpid: %p\n", newpid);
-//         printf("newpid: %d\n", *newpid);
-//     }
+    char *name = data->latest_buf; // buffer stuff
+    if (RPC_DEBUG_SPAWN) 
+    {
+        debug_printf("Entering process_spawn_handler\n");
+        debug_printf("core: %d\n", core);
+        debug_printf("process name: %p\n", name);
+        debug_printf("process name: %s\n", name);
+    }
 
-//     // Not yet implemented
-//     assert(false);
-//     *newpid = add_pid(name, core);
-//     errval_t err;
-//     err = spawn_load_by_name(name, (struct spawninfo *) malloc(sizeof(struct spawninfo)));
-//     assert(err_is_ok(err));
+    domainid_t newpid = add_pid(name, core);
+    if (DEBUG_PID)
+        debug_pid_lists();
+    errval_t err;
     
-//     uintptr_t uargs[2];
-//     uargs[0] = (uintptr_t) &data->lc;
-//     uargs[1] = (uintptr_t) newpid;
+    // Start the new process
+    err = spawn_load_by_name(name, (struct spawninfo *) malloc(sizeof(struct spawninfo)));
+    assert(err_is_ok(err));
     
-//     err = lmp_chan_register_send(&data->lc, get_default_waitset(), MKCLOSURE(pid_send_handler, uargs));
-//     event_dispatch(get_default_waitset());
-// }
+    uintptr_t uargs[2];
+    uargs[0] = (uintptr_t) &data->lc;
+    uargs[1] = (uintptr_t) &newpid;
 
-// void pid_send_handler(void *arg) {
-//     uintptr_t *uarg = (uintptr_t *)arg;
-//     struct lmp_chan *lc = (struct lmp_chan *)uarg[0];
-//     domainid_t *newpid = (domainid_t *) uarg[1];
+    // Send the pid back to the parent process 
+    err = lmp_chan_register_send(&data->lc, get_default_waitset(), MKCLOSURE(pid_send_handler, uargs));
+    event_dispatch(get_default_waitset());
+}
 
-//     errval_t err = lmp_chan_send2(lc, LMP_SEND_FLAGS_DEFAULT, NULL_CAP, RPC_OK, *newpid);
-//     assert(err_is_ok(err));
-// }
+// Return the new pid to the parent process
+void pid_send_handler(void *arg) {
+    uintptr_t *uarg = (uintptr_t *)arg;
+    struct lmp_chan *lc = (struct lmp_chan *)uarg[0];
+    domainid_t *newpid = (domainid_t *) uarg[1];
+
+    errval_t err = lmp_chan_send2(lc, LMP_SEND_FLAGS_DEFAULT, NULL_CAP, RPC_OK, *newpid);
+    assert(err_is_ok(err));
+}
 
 void string_recv_handler(void *args, struct lmp_recv_msg *msg, struct capref *cap) {
     // printf("String received\n");
@@ -333,11 +308,14 @@ void string_recv_handler(void *args, struct lmp_recv_msg *msg, struct capref *ca
         c->buf[c->buf_idx++] = (char) (w >> (8 * (i % 4)));
     }
     if (c->buf_idx == c->len) {
+        // Now that we've received the entire string, store it in latest_buf so it can be used 
+        // later, and clear buf so we can receive a new string
+        c->latest_buf = c->buf;
+        c->latest_len = c->len;
         c->buf_idx = 0;
         c->len = 0;
         printf("String is : %s\n", c->buf);
         c->buf = NULL;
-       
     }
  
     lmp_chan_register_send(&c->lc, get_default_waitset(), MKCLOSURE((void *) acknowledgement_send_handler, &c->lc));

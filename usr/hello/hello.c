@@ -15,12 +15,18 @@
 
 
 #include <stdio.h>
+#include <aos/aos_rpc.h>
 
+static struct aos_rpc init_rpc;
 int main(int argc, char *argv[])
 {
     printf("Hello, world! from userspace\n");
     for (int i = 0; i < argc; i++) {
         printf("%s\n", argv[i]);
     }
+
+    errval_t err;
+    err = aos_rpc_init(&init_rpc);
+    err = aos_rpc_send_string(&init_rpc, "hello there");
     return 0;
 }
