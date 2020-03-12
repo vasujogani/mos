@@ -171,6 +171,10 @@ int main(int argc, char *argv[])
 
     // add_pid("init", my_core_id);
 
+    uint32_t time = 0;
+    __asm__ volatile ("MRC p15, 0, %0, c9, c13, 0" : "=r" (time));
+    debug_printf("IN MAIN CYCLES: %u\n", time);
+
     // add_pid("memeater", my_core_id);
     spawn_load_by_name("memeater", (struct spawninfo *) malloc(sizeof(struct spawninfo)));
 

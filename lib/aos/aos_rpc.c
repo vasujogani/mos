@@ -13,6 +13,7 @@
  */
 
 #include <aos/aos_rpc.h>
+#include <barrelfish_kpi/asm_inlines_arch.h>
 
 void handshake_send_handler(void *arg);
 void acknowledgement_recv_handler(void *arg);
@@ -76,6 +77,9 @@ errval_t aos_rpc_send_string(struct aos_rpc *chan, const char *string)
 {
     // TODO: implement functionality to send a string over the given channel
     // and wait for a response.
+    reset_cycle_counter();
+
+    // uint32_t start = get_time();
     uint32_t uargs[9];
     uargs[0] = (uint32_t) chan;
  
@@ -114,6 +118,11 @@ errval_t aos_rpc_send_string(struct aos_rpc *chan, const char *string)
         event_dispatch(chan->ws);
         event_dispatch(chan->ws);
     }
+    uintptr_t end = get_time();
+    debug_printf("rpc aos_rpc_send_string took %u cycles\n", end);
+    // if (end > start) {
+    //     debug_printf("rpc send_string took %u cycles\n", end - start);
+    //  }
  
     return SYS_ERR_OK;
 }
@@ -147,10 +156,17 @@ void ram_cap_recv_handler(void *args) {
 errval_t aos_rpc_get_ram_cap(struct aos_rpc *chan, size_t request_bytes,
                              struct capref *retcap, size_t *ret_bytes)
 {
-    uint32_t start = get_time();
-    debug_printf("*************************************Time started: %u\n", start);
+    // uint32_t start = get_time();
+    // debug_printf("*************************************Time started: %u\n", start);
+    // uint32_t time = 0;
+    // __asm__ volatile ("MRC p15, 0, %0, c9, c13, 0" : "=r" (time));
+    // debug_printf("^^^^^^^^^^%u\n", time);
+    
     // printf("in aos_rpc_get_ram_cap\n");
     // Fill in args 1. aos_rpc 2. request_bytes 3. retcap 4. ret_bytes
+    reset_cycle_counter();
+
+    // uint32_t start = get_time();
     uintptr_t args[3];
     args[0] = (uintptr_t) chan;
     args[1] = (uintptr_t) &request_bytes;
@@ -165,12 +181,21 @@ errval_t aos_rpc_get_ram_cap(struct aos_rpc *chan, size_t request_bytes,
     lmp_chan_register_recv(&chan->channel, chan->ws, MKCLOSURE((void *) ram_cap_recv_handler, args));
     // printf("ALLOCATED RECEIVE HANDLER\n");
 
-    uint32_t end = get_time();
-    debug_printf("*************************************Time end: %u\n", end);
+
     event_dispatch(chan->ws);
     if (ret_bytes) {
         *ret_bytes = request_bytes;
     }
+    // uint32_t end = get_time();
+    // debug_printf("*************************************Time end: %u\n", end);
+    // uint32_t diff = end - start;
+    // debug_printf("*************************************Time taken: %u\n", diff);
+    uintptr_t end = get_time();
+    debug_printf("rpc ram_cap took %u cycles\n", end);
+    // if (end > start) {
+    //     debug_printf("rpc ram_cap took %u cycles\n", end - start);
+    // }
+
     return SYS_ERR_OK;
 }
 
@@ -254,7 +279,25 @@ errval_t aos_rpc_get_device_cap(struct aos_rpc *rpc,
 // }
 
 errval_t aos_rpc_init(struct aos_rpc *rpc)
-{
+{   
+    debug_printf("doing a lil test\n");
+    reset_cycle_counter();
+    uintptr_t test = get_time();
+    debug_printf("%u\n", test);
+
+    reset_cycle_counter();
+     test = get_time();
+    debug_printf("%u\n", test);
+
+    reset_cycle_counter();
+     test = get_time();
+    debug_printf("%u\n", test);
+    debug_printf("test is done!!\n");
+
+    reset_cycle_counter();
+    // uint32_t start = get_time();
+    // debug_printf("*************************************INIT Time started: %u\n", start);
+    
     errval_t err;
     
     // create an lmp_chan structure for communicating with init
@@ -276,6 +319,12 @@ errval_t aos_rpc_init(struct aos_rpc *rpc)
     err = lmp_chan_register_send(&rpc->channel,rpc->ws, MKCLOSURE((void*)handshake_send_handler, rpc));
     // loop till success?
     event_dispatch(rpc->ws);
+    uintptr_t end = get_time();
+    debug_printf("rpc aos_rpc_init took %u cycles\n", end);
+     // if (end > start) {
+     //    debug_printf("rpc init took %u cycles\n", end - start);
+     // }
+    
     return SYS_ERR_OK;
 }
 
@@ -456,12 +505,29 @@ errval_t aos_rpc_process_get_all_pids(struct aos_rpc *chan,
 }
 
 uint32_t get_time(void) {
-    volatile uint32_t time = 0;
-    __asm__ volatile ("mrc p15, 0, %0, c9, c13, 0" : "=r" (time));
+    
+    // uint32_t pmcr = 0;
+    
+    // __asm__ volatile ("MRC p15,0, %0, c9,c12,0" : "=r" (pmcr) );
+    // debug_printf("pmcr %u\n", pmcr & 0x4);
 
-    // __asm__ volatile ("mrc p15, 0, %%r0, c9, c13, 0" : : : "%r0" );
-    // //value of r0 should be clock cycles now
-    // __asm__ volatile ("mov %0, %%r0" : "=r" (time) : : "%r0" );
+    // uint32_t time = 0;
+    // __asm__ volatile ("mrc p15, 0, %0, c9, c13, 0" : "=r" (time) : : );
 
-    return time;
+// uint32_t val;
+//     __asm volatile ("mrc p15, 0, %0, c9, c13, 0\t\n": "=r"(val));
+    return  get_cycle_count();
+    // volatile uint32_t* timeptr;
+    // __asm__ volatile ("MRC p15, 0, %0, c9, c13, 0" : "=r" (timeptr) : : );    
+
+    // debug_printf("timeptr %u deref %u\n", timeptr, *timeptr);
+
+    // __asm__ volatile ("mrc p15, 0, %%r12, c9, c13, 0" : : : "%r12");
+    //value of r0 should be clock cycles now
+    // int* p = NULL;
+    // int v = *p;
+    // debug_printf("%d\n", v);
+    // __asm__ volatile ("mov %0, %%r12" : "=r" (time) : : "%r12");
+
+    // return time;
 }
