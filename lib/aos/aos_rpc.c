@@ -24,6 +24,7 @@ void recv_string_handler(void* args);
 void putchar_send_handler(void *arg);
 void spawn_send_handler(void *args);
 void spawn_recv_handler(void *args);
+uint32_t get_time(void);
 
 
 void number_send_handler(void *arg)
@@ -363,7 +364,7 @@ errval_t aos_rpc_process_spawn(struct aos_rpc *chan, char *name,
 
     aos_rpc_send_string(chan, name);
     
-    uintptr_t args[4];
+    uintptr_t args[3];
     args[0] = (uintptr_t) chan;
     args[1] = (uintptr_t) core;
     args[2] = (uintptr_t) newpid;
@@ -416,15 +417,18 @@ void spawn_recv_handler(void *args)
     assert(err_is_ok(err));
     assert(msg.buf.msglen > 0);
     assert(msg.words[0] == RPC_OK);
- 
-    domainid_t *newpid = (domainid_t *) uargs[3];
+    debug_printf("after receive\n");
+    domainid_t *newpid = (domainid_t *) uargs[2];
     *newpid = msg.words[1];
     if (RPC_DEBUG_SPAWN) {
         if (newpid != NULL) {
             debug_printf("newpid: %p\n", newpid);
             debug_printf("newpid: %d\n", *newpid);
+            debug_printf("msg.words[1]: %d\n", (domainid_t) msg.words[1]);
         }
-        debug_printf("msg.words[1]: %d\n", (domainid_t) msg.words[1]);
+        else {
+            debug_printf("returned pid was null\n");
+        } 
     }
     if (RPC_DEBUG_SPAWN)
         debug_printf("Exiting spawn_recv_handler\n");

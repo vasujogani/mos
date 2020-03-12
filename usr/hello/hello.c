@@ -38,8 +38,6 @@ int main(int argc, char *argv[])
 	    }
     }
 
-    errval_t err;
-    err = aos_rpc_init(&init_rpc);
     err = aos_rpc_send_string(&init_rpc, "hello there");
     return 0;
 }

@@ -141,12 +141,15 @@ static errval_t request_and_map_memory(void)
 // }
 
 void spawn_many_hellos (void) {
-
+    
+    domainid_t pids[5];
     for (int i = 0; i < 5; ++i)
     {
         // add request memory
         //TODO change to spawn rpc
-        spawn_load_by_name("hello", (struct spawninfo *) malloc(sizeof(struct spawninfo)));
+        // spawn_load_by_name("hello", (struct spawninfo *) malloc(sizeof(struct spawninfo)));
+        aos_rpc_process_spawn(&init_rpc, "hello", 0, &pids[i]);
+        debug_printf("Returned pid: %d\n", pids[i]);
     }
 }
 
