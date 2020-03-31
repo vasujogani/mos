@@ -1,0 +1,10 @@
+armv7/lib/newlib/newlib/libc/ctype/_for_lib_ctype/isalnum.o \
+ armv7/lib/newlib/newlib/libc/ctype/_for_lib_ctype/isalnum.o.depend: \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/ctype/isalnum.c \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/_ansi.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/newlib.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/config.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/machine/ieeefp.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/features.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/ctype.h \
+ /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/_ansi.h
