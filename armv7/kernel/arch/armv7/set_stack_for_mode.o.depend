@@ -1,5 +1,0 @@
-armv7/kernel/arch/armv7/set_stack_for_mode.o \
- armv7/kernel/arch/armv7/set_stack_for_mode.o.depend: \
- /u/rv22698/Documents/Multicore/p2_code/kernel/arch/armv7/set_stack_for_mode.S \
- /u/rv22698/Documents/Multicore/p2_code/include/deputy/nodeputy.h \
- /u/rv22698/Documents/Multicore/p2_code/include/arch/arm/barrelfish_kpi/flags_arch.h

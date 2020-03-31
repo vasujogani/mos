@@ -1,6 +1,0 @@
-
-[
-    compileNativeLib "grubmenu"
-        [ "grubmenu.c" ]
-        [ "--std=c99", "-g" ]
-]

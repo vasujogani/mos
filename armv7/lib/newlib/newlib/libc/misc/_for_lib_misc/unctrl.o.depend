@@ -1,8 +1,0 @@
-armv7/lib/newlib/newlib/libc/misc/_for_lib_misc/unctrl.o \
- armv7/lib/newlib/newlib/libc/misc/_for_lib_misc/unctrl.o.depend: \
- /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/misc/unctrl.c \
- /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/_ansi.h \
- /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/newlib.h \
- /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/config.h \
- /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/machine/ieeefp.h \
- /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/sys/features.h

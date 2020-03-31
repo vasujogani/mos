@@ -1,9 +1,0 @@
-armv7/kernel/arch/armv7/aos/exceptions.o \
- armv7/kernel/arch/armv7/aos/exceptions.o.depend: \
- /u/rv22698/Documents/Multicore/p2_code/kernel/arch/armv7/aos/exceptions.S \
- /u/rv22698/Documents/Multicore/p2_code/include/deputy/nodeputy.h \
- armv7/include/asmoffsets.h \
- /u/rv22698/Documents/Multicore/p2_code/include/arch/arm/barrelfish_kpi/registers_arch.h \
- /u/rv22698/Documents/Multicore/p2_code/include/arch/arm/barrelfish_kpi/flags_arch.h \
- /u/rv22698/Documents/Multicore/p2_code/kernel/include/arch/armv7/exceptions.h \
- /u/rv22698/Documents/Multicore/p2_code/kernel/include/arch/armv7/offsets.h

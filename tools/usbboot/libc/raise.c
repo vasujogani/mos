@@ -1,3 +1,0 @@
-void raise(void)
-{
-}

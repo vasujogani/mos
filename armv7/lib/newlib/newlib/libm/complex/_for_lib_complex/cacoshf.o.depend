@@ -1,5 +1,0 @@
-armv7/lib/newlib/newlib/libm/complex/_for_lib_complex/cacoshf.o \
- armv7/lib/newlib/newlib/libm/complex/_for_lib_complex/cacoshf.o.depend: \
- /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libm/complex/cacoshf.c \
- /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/include/complex.h \
- /u/rv22698/Documents/Multicore/p2_code/include/sys/cdefs.h

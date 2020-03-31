@@ -1,3 +1,0 @@
-armv7/lib/newlib/newlib/libc/stdlib/_for_lib_stdlib/realloc.o \
- armv7/lib/newlib/newlib/libc/stdlib/_for_lib_stdlib/realloc.o.depend: \
- /u/rv22698/Documents/Multicore/p2_code/lib/newlib/newlib/libc/stdlib/realloc.c
